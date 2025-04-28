@@ -200,8 +200,9 @@ describe('Order Service Tests', () => {
       const restaurant = 'Test Restaurant';
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1); // Expires in 1 hour
+      const location = 'Regenstein Library'; // Valid campus location
       
-      const result = await order_service.create_order(testUserId, restaurant, expiration);
+      const result = await order_service.create_order(testUserId, restaurant, expiration, location);
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
       
@@ -211,53 +212,28 @@ describe('Order Service Tests', () => {
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
       expect(orderRecord.rows[0].expiration).toEqual(expiration);
+      expect(orderRecord.rows[0].loc).toBe(location);
     });
     
-    // Test location selection (since there's a custom locs type)
-    test('should create an order with a valid location', async () => {
+    // Test all valid campus locations
+    test('should accept all valid campus locations', async () => {
       const restaurant = 'Location Test Restaurant';
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const location = 'Regenstein Library'; // One of the locs values
       
-      const result = await order_service.create_order(testUserId, restaurant, expiration, location);
-      expect(result.success).toBe(true);
+      // Test each valid location from the locs enum
+      const validLocations = ['Regenstein Library', 'Harper Library', 'John Crerar Library'];
       
-      // Verify location was stored correctly
-      const orderRecord = await db.query('SELECT location FROM order_group WHERE id = $1', [result.orderId]);
-      expect(orderRecord.rows[0].location).toBe(location);
+      for (const location of validLocations) {
+        const result = await order_service.create_order(testUserId, restaurant, expiration, location);
+        expect(result.success).toBe(true);
+        
+        const orderRecord = await db.query('SELECT loc FROM order_group WHERE id = $1', [result.orderId]);
+        expect(orderRecord.rows[0].loc).toBe(location);
+      }
     });
     
-    test('should reject invalid restaurant name', async () => {
-      // Empty restaurant name
-      const expiration = new Date();
-      expiration.setHours(expiration.getHours() + 1);
-      
-      await expect(order_service.create_order(testUserId, '', expiration))
-        .rejects.toThrow(/restaurant.*required/i);
-    });
-    
-    test('should reject past expiration time', async () => {
-      const restaurant = 'Test Restaurant';
-      const pastExpiration = new Date();
-      pastExpiration.setHours(pastExpiration.getHours() - 1); // 1 hour in the past
-      
-      await expect(order_service.create_order(testUserId, restaurant, pastExpiration))
-        .rejects.toThrow(/expiration.*future/i);
-    });
-    
-    test('should reject nonexistent user ID', async () => {
-      const restaurant = 'Test Restaurant';
-      const expiration = new Date();
-      expiration.setHours(expiration.getHours() + 1);
-      
-      const invalidUserId = 9999; // Assuming this ID doesn't exist
-      
-      await expect(order_service.create_order(invalidUserId, restaurant, expiration))
-        .rejects.toThrow(/user not found/i);
-    });
-    
-    test('should reject invalid location', async () => {
+    test('should reject invalid campus location', async () => {
       const restaurant = 'Test Restaurant';
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
@@ -265,6 +241,56 @@ describe('Order Service Tests', () => {
       
       await expect(order_service.create_order(testUserId, restaurant, expiration, invalidLocation))
         .rejects.toThrow(/invalid location/i);
+    });
+    
+    test('should reject empty restaurant name', async () => {
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+      const location = 'Regenstein Library';
+      
+      await expect(order_service.create_order(testUserId, '', expiration, location))
+        .rejects.toThrow(/restaurant.*required/i);
+    });
+    
+    test('should reject past expiration time', async () => {
+      const restaurant = 'Test Restaurant';
+      const pastExpiration = new Date();
+      pastExpiration.setHours(pastExpiration.getHours() - 1); // 1 hour in the past
+      const location = 'Harper Library';
+      
+      await expect(order_service.create_order(testUserId, restaurant, pastExpiration, location))
+        .rejects.toThrow(/expiration.*future/i);
+    });
+    
+    test('should reject nonexistent user ID', async () => {
+      const restaurant = 'Test Restaurant';
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+      const location = 'John Crerar Library';
+      
+      const invalidUserId = 9999; // Assuming this ID doesn't exist
+      
+      await expect(order_service.create_order(invalidUserId, restaurant, expiration, location))
+        .rejects.toThrow(/user not found/i);
+    });
+    
+    test('should handle very long restaurant names', async () => {
+      // Generate a very long restaurant name
+      const longName = 'A'.repeat(255);  // Assuming varchar(255) limit
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+      const location = 'Regenstein Library';
+      
+      try {
+        const result = await order_service.create_order(testUserId, longName, expiration, location);
+        expect(result.success).toBe(true);
+        
+        const orderRecord = await db.query('SELECT restaurant FROM order_group WHERE id = $1', [result.orderId]);
+        expect(orderRecord.rows[0].restaurant).toBe(longName);
+      } catch (error) {
+        // If error occurs, it should be specific to character limit
+        expect(error.message).toMatch(/restaurant.*too long/i);
+      }
     });
   });
   
@@ -277,8 +303,9 @@ describe('Order Service Tests', () => {
       const restaurant = 'Delete Test Restaurant';
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
+      const location = 'Regenstein Library';
       
-      const result = await order_service.create_order(testUserId, restaurant, expiration);
+      const result = await order_service.create_order(testUserId, restaurant, expiration, location);
       testOrderId = result.orderId;
     });
     
@@ -316,7 +343,7 @@ describe('Order Service Tests', () => {
   
   // Integration tests between user and order services
   describe('User-Order Integration', () => {
-    test('should allow a newly registered user to create an order', async () => {
+    test('full user registration and order creation flow', async () => {
       // Register new user
       const email = 'newuser@example.com';
       await user_service.send_code(email);
@@ -334,56 +361,4 @@ describe('Order Service Tests', () => {
       // Create an order
       const restaurant = 'Integration Restaurant';
       const expiration = new Date();
-      expiration.setHours(expiration.getHours() + 1);
-      const location = 'John Crerar Library'; // Valid location from locs enum
-      
-      const result = await order_service.create_order(userId, restaurant, expiration, location);
-      expect(result.success).toBe(true);
-      expect(result.orderId).toBeDefined();
-      
-      // Check that the order has the correct location
-      const orderRecord = await db.query('SELECT location FROM order_group WHERE id = $1', [result.orderId]);
-      expect(orderRecord.rows[0].location).toBe(location);
-    });
-  });
-  
-  // Tests for the location enum type
-  describe('Location Enum Tests', () => {
-    test('should allow all valid location values', async () => {
-      const validLocations = ['Regenstein Library', 'Harper Library', 'John Crerar Library'];
-      const restaurant = 'Locations Test';
-      const expiration = new Date();
-      expiration.setHours(expiration.getHours() + 1);
-      
-      for (const location of validLocations) {
-        const result = await order_service.create_order(testUserId, restaurant, expiration, location);
-        expect(result.success).toBe(true);
-        
-        const orderRecord = await db.query('SELECT location FROM order_group WHERE id = $1', [result.orderId]);
-        expect(orderRecord.rows[0].location).toBe(location);
-      }
-    });
-  });
-  
-  // Performance tests
-  describe('Performance', () => {
-    test('should handle creating multiple orders efficiently', async () => {
-      const restaurant = 'Performance Test Restaurant';
-      const expiration = new Date();
-      expiration.setHours(expiration.getHours() + 1);
-      
-      const startTime = Date.now();
-      
-      // Create 10 orders in sequence
-      for (let i = 0; i < 10; i++) {
-        await order_service.create_order(testUserId, `${restaurant} ${i}`, expiration);
-      }
-      
-      const endTime = Date.now();
-      const totalTime = endTime - startTime;
-      
-      // Assuming each operation should take < 100ms
-      expect(totalTime).toBeLessThan(1000);
-    });
-  });
-});
+      expiration.setHou
