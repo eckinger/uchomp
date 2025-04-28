@@ -15,9 +15,9 @@ describe('User Service Tests', () => {
       expect(result.success).toBe(true);
       
       // Verify code was inserted into code table
-      const codeRecord = await db.query('SELECT * FROM code WHERE email = $1', [email]);
+      const codeRecord = await db.query('SELECT key FROM code WHERE email = $1', [email]);
       expect(codeRecord.rows.length).toBe(1);
-      expect(codeRecord.rows[0].code).toBeDefined();
+      expect(codeRecord.rows[0].key).toBeDefined();
     });
     
     // Test invalid email format
@@ -42,7 +42,7 @@ describe('User Service Tests', () => {
   describe('verify', () => {
     // Setup: Insert test code
     beforeEach(async () => {
-      await db.query('INSERT INTO code (email, code, created_at) VALUES ($1, $2, $3)', 
+      await db.query('INSERT INTO code (email, key, created_at) VALUES ($1, $2, $3)', 
         ['verify@example.com', '123456', new Date()]);
     });
     
@@ -82,7 +82,7 @@ describe('User Service Tests', () => {
       const expiredDate = new Date();
       expiredDate.setMinutes(expiredDate.getMinutes() - 15);
       
-      await db.query('INSERT INTO code (email, code, created_at) VALUES ($1, $2, $3)', 
+      await db.query('INSERT INTO code (email, key, created_at) VALUES ($1, $2, $3)', 
         ['expired@example.com', '123456', expiredDate]);
         
       const result = await user_service.verify('expired@example.com', '123456');
@@ -147,8 +147,8 @@ describe('User Service Tests', () => {
       expect(sendResult.success).toBe(true);
       
       // Get the code from the database for testing purposes
-      const codeRecord = await db.query('SELECT code FROM code WHERE email = $1', [email]);
-      const code = codeRecord.rows[0].code;
+      const codeRecord = await db.query('SELECT key FROM code WHERE email = $1', [email]);
+      const code = codeRecord.rows[0].key;
       
       // Step 2: Verify the code
       const verifyResult = await user_service.verify(email, code);
@@ -206,8 +206,8 @@ describe('Order Service Tests', () => {
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
       
-      // Verify order was inserted into order_group table
-      const orderRecord = await db.query('SELECT * FROM order_group WHERE id = $1', [result.orderId]);
+      // Verify order was inserted into food_order table
+      const orderRecord = await db.query('SELECT * FROM food_order WHERE id = $1', [result.orderId]);
       expect(orderRecord.rows.length).toBe(1);
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
@@ -228,7 +228,7 @@ describe('Order Service Tests', () => {
         const result = await order_service.create_order(testUserId, restaurant, expiration, location);
         expect(result.success).toBe(true);
         
-        const orderRecord = await db.query('SELECT loc FROM order_group WHERE id = $1', [result.orderId]);
+        const orderRecord = await db.query('SELECT loc FROM food_order WHERE id = $1', [result.orderId]);
         expect(orderRecord.rows[0].loc).toBe(location);
       }
     });
@@ -285,7 +285,7 @@ describe('Order Service Tests', () => {
         const result = await order_service.create_order(testUserId, longName, expiration, location);
         expect(result.success).toBe(true);
         
-        const orderRecord = await db.query('SELECT restaurant FROM order_group WHERE id = $1', [result.orderId]);
+        const orderRecord = await db.query('SELECT restaurant FROM food_order WHERE id = $1', [result.orderId]);
         expect(orderRecord.rows[0].restaurant).toBe(longName);
       } catch (error) {
         // If error occurs, it should be specific to character limit
@@ -313,8 +313,8 @@ describe('Order Service Tests', () => {
       const result = await order_service.delete_order(testOrderId);
       expect(result.success).toBe(true);
       
-      // Verify order was removed from order_group table
-      const orderRecord = await db.query('SELECT * FROM order_group WHERE id = $1', [testOrderId]);
+      // Verify order was removed from food_order table
+      const orderRecord = await db.query('SELECT * FROM food_order WHERE id = $1', [testOrderId]);
       expect(orderRecord.rows.length).toBe(0);
     });
     
@@ -327,16 +327,16 @@ describe('Order Service Tests', () => {
     });
     
     test('should cascade delete any related food orders', async () => {
-      // Add a food_order related to the order_group
-      await db.query('INSERT INTO food_order (order_group_id, user_id) VALUES ($1, $2)', 
+      // Add a order_group related to the food_order
+      await db.query('INSERT INTO order_group (food_order_id, user_id) VALUES ($1, $2)', 
         [testOrderId, testUserId]);
         
       // Delete the order
       const result = await order_service.delete_order(testOrderId);
       expect(result.success).toBe(true);
       
-      // Verify related food_order was also removed
-      const foodOrderRecords = await db.query('SELECT * FROM food_order WHERE order_group_id = $1', [testOrderId]);
+      // Verify related order_group was also removed
+      const foodOrderRecords = await db.query('SELECT * FROM order_group WHERE food_order_id = $1', [testOrderId]);
       expect(foodOrderRecords.rows.length).toBe(0);
     });
   });
@@ -348,8 +348,8 @@ describe('Order Service Tests', () => {
       const email = 'newuser@example.com';
       await user_service.send_code(email);
       
-      const codeRecord = await db.query('SELECT code FROM code WHERE email = $1', [email]);
-      const code = codeRecord.rows[0].code;
+      const codeRecord = await db.query('SELECT key FROM code WHERE email = $1', [email]);
+      const code = codeRecord.rows[0].key;
       
       await user_service.verify(email, code);
       await user_service.get_name_and_cell(email, 'New User', '555-123-7890');
