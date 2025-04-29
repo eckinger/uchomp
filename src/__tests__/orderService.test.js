@@ -30,13 +30,13 @@ describe("Order Service Tests", () => {
       const restaurant = "Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1); // Expires in 1 hour
-      const location = "Regenstein Library"; // Valid campus location
+      const meetupLocation = "Regenstein Library"; // Valid campus location
 
       const result = await order_service.create_order(
         testUserId,
         restaurant,
         expiration,
-        location,
+        meetupLocation,
       );
       expect(result.success).toBe(true);
       expect(result.order_id).toBeDefined();
@@ -50,7 +50,7 @@ describe("Order Service Tests", () => {
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
       expect(orderRecord.rows[0].expiration).toEqual(expiration);
-      expect(orderRecord.rows[0].loc).toBe(location);
+      expect(orderRecord.rows[0].loc).toBe(meetupLocation);
     });
 
     // Test all valid campus locations
@@ -66,12 +66,12 @@ describe("Order Service Tests", () => {
         "John Crerar Library",
       ];
 
-      for (const location of validLocations) {
+      for (const meetupLocation of validLocations) {
         const result = await order_service.create_order(
           testUserId,
           restaurant,
           expiration,
-          location,
+          meetupLocation,
         );
         expect(result.success).toBe(true);
 
@@ -79,7 +79,7 @@ describe("Order Service Tests", () => {
           "SELECT loc FROM food_order WHERE id = $1",
           [result.order_id],
         );
-        expect(orderRecord.rows[0].loc).toBe(location);
+        expect(orderRecord.rows[0].loc).toBe(meetupLocation);
       }
     });
 
@@ -102,10 +102,10 @@ describe("Order Service Tests", () => {
     test("should reject empty restaurant name", async () => {
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const location = "Regenstein Library";
+      const meetupLocation = "Regenstein Library";
 
       await expect(
-        order_service.create_order(testUserId, "", expiration, location),
+        order_service.create_order(testUserId, "", expiration, meetupLocation),
       ).rejects.toThrow(/restaurant.*required/i);
     });
 
@@ -113,14 +113,14 @@ describe("Order Service Tests", () => {
       const restaurant = "Test Restaurant";
       const pastExpiration = new Date();
       pastExpiration.setHours(pastExpiration.getHours() - 1); // 1 hour in the past
-      const location = "Harper Library";
+      const meetupLocation = "Harper Library";
 
       await expect(
         order_service.create_order(
           testUserId,
           restaurant,
           pastExpiration,
-          location,
+          meetupLocation,
         ),
       ).rejects.toThrow(/expiration.*future/i);
     });
@@ -129,7 +129,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const location = "John Crerar Library";
+      const meetupLocation = "John Crerar Library";
 
       const invalidUserId = 9999; // Assuming this ID doesn't exist
 
@@ -138,7 +138,7 @@ describe("Order Service Tests", () => {
           invalidUserId,
           restaurant,
           expiration,
-          location,
+          meetupLocation,
         ),
       ).rejects.toThrow(/user not found/i);
     });
@@ -148,7 +148,7 @@ describe("Order Service Tests", () => {
       const longName = "A".repeat(255); // Assuming varchar(255) limit
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const location = "Regenstein Library";
+      const meetupLocation = "Regenstein Library";
 
       try {
         const result = await order_service.create_order(
@@ -180,13 +180,13 @@ describe("Order Service Tests", () => {
       const restaurant = "Delete Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const location = "Regenstein Library";
+      const meetupLocation = "Regenstein Library";
 
       const result = await order_service.create_order(
         testUserId,
         restaurant,
         expiration,
-        location,
+        meetupLocation,
       );
       testOrderId = result.order_id;
     });
@@ -258,13 +258,13 @@ describe("Order Service Tests", () => {
       const restaurant = "Integration Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const location = "Regenstein Library";
+      const meetupLocation = "Regenstein Library";
 
       const result = await order_service.create_order(
         userId,
         restaurant,
         expiration,
-        location,
+        meetupLocation,
       );
       expect(result.success).toBe(true);
       expect(result.order_id).toBeDefined();
@@ -276,7 +276,7 @@ describe("Order Service Tests", () => {
       );
       expect(orderRecord.rows[0].owner_id).toBe(userId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
-      expect(orderRecord.rows[0].loc).toBe(location);
+      expect(orderRecord.rows[0].loc).toBe(meetupLocation);
     });
   });
 });
