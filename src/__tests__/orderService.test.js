@@ -1,11 +1,15 @@
-describe("orderService", () => {
-  it("should pass sanity check", () => {
-    expect(true).toBe(true);
-  });
-});
+// Currently, we assume we have a `db` variable for our tests
+// As part of the implementation, we will mock this behavior with Docker and Postgres
 
 // Test suite for order_service methods
 describe("Order Service Tests", () => {
+  // Clean up database after each test
+  afterEach(async () => {
+    await db.query("DELETE FROM order_group");
+    await db.query("DELETE FROM food_order");
+    await db.query('DELETE FROM "user"');
+  });
+
   // Setup: Create test user
   beforeAll(async () => {
     await db.query(

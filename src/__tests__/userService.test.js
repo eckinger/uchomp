@@ -1,11 +1,10 @@
-describe("userService", () => {
-    it ("should pass sanity check", () => {
-        expect(true).toBe(true)
-    })
-})
+describe("User Service Tests", () => {
+  // Clean up database after each test
+  afterEach(async () => {
+    await db.query('DELETE FROM "user"');
+    await db.query("DELETE FROM code");
+  });
 
-// Test suite for user_service methods
-describe('User Service Tests', () => {
   // Tests for send_code function
   describe('send_code', () => {
     // Test valid email input
