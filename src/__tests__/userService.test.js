@@ -62,6 +62,24 @@ describe('User Service Tests', () => {
       const userRecord = await db.query('SELECT * FROM "user" WHERE email = $1', [email]);
       expect(userRecord.rows.length).toBe(1);
     });
+
+    // test correct ID
+    test('should generate a valid user ID upon successful verification', async () => {
+      const email = 'verify@example.com';
+      const code = '123456';
+            
+      // Verify the code which should create a user
+      const result = await user_service.verify(email, code);
+      expect(result.success).toBe(true);
+      
+      // Check that user was created with a valid ID
+      const userRecord = await db.query('SELECT id FROM "user" WHERE email = $1', [email]);
+      expect(userRecord.rows.length).toBe(1);
+      expect(userRecord.rows[0].id).toBeDefined();
+      expect(typeof userRecord.rows[0].id).toBe('number');
+      expect(userRecord.rows[0].id).toBeGreaterThan(0);
+    });
+    
     
     // Test incorrect code
     test('should reject incorrect verification code', async () => {
@@ -204,10 +222,10 @@ describe('Order Service Tests', () => {
       
       const result = await order_service.create_order(testUserId, restaurant, expiration, location);
       expect(result.success).toBe(true);
-      expect(result.orderId).toBeDefined();
+      expect(result.order_id).toBeDefined();
       
       // Verify order was inserted into food_order table
-      const orderRecord = await db.query('SELECT * FROM food_order WHERE id = $1', [result.orderId]);
+      const orderRecord = await db.query('SELECT * FROM food_order WHERE id = $1', [result.order_id]);
       expect(orderRecord.rows.length).toBe(1);
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
@@ -215,7 +233,7 @@ describe('Order Service Tests', () => {
       expect(orderRecord.rows[0].loc).toBe(location);
     });
     
-    // Test all valid campus locations
+    // Test all valid campus locations 
     test('should accept all valid campus locations', async () => {
       const restaurant = 'Location Test Restaurant';
       const expiration = new Date();
@@ -228,7 +246,7 @@ describe('Order Service Tests', () => {
         const result = await order_service.create_order(testUserId, restaurant, expiration, location);
         expect(result.success).toBe(true);
         
-        const orderRecord = await db.query('SELECT loc FROM food_order WHERE id = $1', [result.orderId]);
+        const orderRecord = await db.query('SELECT loc FROM food_order WHERE id = $1', [result.order_id]);
         expect(orderRecord.rows[0].loc).toBe(location);
       }
     });
@@ -285,7 +303,7 @@ describe('Order Service Tests', () => {
         const result = await order_service.create_order(testUserId, longName, expiration, location);
         expect(result.success).toBe(true);
         
-        const orderRecord = await db.query('SELECT restaurant FROM food_order WHERE id = $1', [result.orderId]);
+        const orderRecord = await db.query('SELECT restaurant FROM food_order WHERE id = $1', [result.order_id]);
         expect(orderRecord.rows[0].restaurant).toBe(longName);
       } catch (error) {
         // If error occurs, it should be specific to character limit
@@ -306,7 +324,7 @@ describe('Order Service Tests', () => {
       const location = 'Regenstein Library';
       
       const result = await order_service.create_order(testUserId, restaurant, expiration, location);
-      testOrderId = result.orderId;
+      testOrderId = result.order_id;
     });
     
     test('should delete an existing order', async () => {
