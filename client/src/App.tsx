@@ -5,6 +5,13 @@ import React from "react";
 
 function App() {
   const userService = new UserService();
+
+  const databaseFetch = () => {
+    fetch("http://localhost:5151/api/users")
+      .then((res) => res.json())
+      .then((data) => console.log(`data: ${JSON.stringify(data)}`));
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -12,13 +19,7 @@ function App() {
         <p>
           Edit <code>src/App.js</code> and save to reload.
         </p>
-        <a
-          onMouseEnter={() => userService.verify()}
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a onClick={() => databaseFetch()} className="App-link">
           Learn React
         </a>
       </header>

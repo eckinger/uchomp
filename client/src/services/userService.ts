@@ -3,7 +3,5 @@ export default class UserService {
 
   sendCode() {}
 
-  verify() {
-    console.log("verify");
-  }
+  async verify() {}
 }
