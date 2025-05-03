@@ -39,3 +39,11 @@ CREATE TABLE code (
   code TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT now()
 );
+
+-- seed users table
+INSERT INTO "user" (id, name, email, created_at) VALUES
+  ('11111111-aaaa-bbbb-cccc-111111111111', 'Alice Nguyen', 'alice@example.com', NOW()),
+  ('22222222-bbbb-cccc-dddd-222222222222', 'Bob Smith', 'bob@example.com', NOW() - INTERVAL '1 day'),
+  ('33333333-cccc-dddd-eeee-333333333333', 'Charlie Li', 'charlie@example.com', NOW() - INTERVAL '2 days'),
+  ('44444444-dddd-eeee-ffff-444444444444', 'Diana Patel', 'diana@example.com', NOW() - INTERVAL '3 days'),
+  ('55555555-eeee-ffff-aaaa-555555555555', 'Evan Garcia', 'evan@example.com', NOW() - INTERVAL '4 days');
