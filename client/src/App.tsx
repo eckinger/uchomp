@@ -1,29 +1,17 @@
-import logo from "./logo.svg";
 import "./App.css";
-import UserService from "./services/userService";
 import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Groups from "./pages/groups/page";
+import CreateGroup from "./pages/create-group/page";
+import User from "./models/user";
 
 function App() {
-  const userService = new UserService();
-
-  const databaseFetch = () => {
-    fetch("http://localhost:5151/api/users")
-      .then((res) => res.json())
-      .then((data) => console.log(`data: ${JSON.stringify(data)}`));
-  };
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a onClick={() => databaseFetch()} className="App-link">
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/groups" element={<Groups />} />
+      <Route path="/create-group" element={<CreateGroup user={new User()} />} />
+      <Route path="*" element={<Navigate to="/groups" replace />} />
+    </Routes>
   );
 }
 
