@@ -8,36 +8,40 @@ CREATE TYPE locs AS ENUM (
 -- User table
 CREATE TABLE "user" (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT,
   email TEXT UNIQUE NOT NULL,
-  created_at TIMESTAMP DEFAULT now()
+  name TEXT,
+  cell TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Order group table (MUST come before food_order)
+-- Order group table
 CREATE TABLE order_group (
   id SERIAL PRIMARY KEY,
-  restaurant TEXT,
-  expires_at TIMESTAMP,
-  created_by UUID REFERENCES "user"(id),
+  food_order_id INTEGER, -- Will be updated with FOREIGN KEY after food_order table is created
+  user_id UUID REFERENCES "user"(id),
   created_at TIMESTAMP DEFAULT now()
 );
 
 -- Food order table
 CREATE TABLE food_order (
   id SERIAL PRIMARY KEY,
-  group_id INTEGER REFERENCES order_group(id),
-  user_id UUID REFERENCES "user"(id),
-  item TEXT,
-  quantity INTEGER DEFAULT 1,
-  submitted_at TIMESTAMP DEFAULT now()
+  owner_id UUID REFERENCES "user"(id) NOT NULL,
+  restaurant TEXT NOT NULL,
+  expiration TIMESTAMP NOT NULL,
+  loc locs NOT NULL,
+  created_at TIMESTAMP DEFAULT now()
 );
+
+-- Add the foreign key constraint to order_group after food_order is created
+ALTER TABLE order_group ADD CONSTRAINT fk_food_order 
+  FOREIGN KEY (food_order_id) REFERENCES food_order(id) ON DELETE CASCADE;
 
 -- Code table
 CREATE TABLE code (
-  id SERIAL PRIMARY KEY,
-  user_id UUID REFERENCES "user"(id),
-  code TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT now()
+  email TEXT NOT NULL,
+  key TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (email, key)
 );
 
 -- seed users table
