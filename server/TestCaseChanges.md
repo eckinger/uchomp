@@ -286,7 +286,7 @@ jest.spyOn(db, "query").mockImplementationOnce(() => {
 
 ---
 
-#### 9. **Test Consistency and Grouping**
+#### 8. **Test Consistency and Grouping**
 
 * `describe` and `test` blocks were clearly grouped.
 * All `beforeEach` and `afterEach` are consistently scoped.
