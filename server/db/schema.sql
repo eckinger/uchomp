@@ -18,7 +18,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: locs; Type: TYPE; Schema: public; Owner: neondb_owner
+-- Name: locs; Type: TYPE; Schema: public; Owner: hoytt
 --
 
 CREATE TYPE public.locs AS ENUM (
@@ -28,7 +28,25 @@ CREATE TYPE public.locs AS ENUM (
 );
 
 
-ALTER TYPE public.locs OWNER TO neondb_owner;
+ALTER TYPE public.locs OWNER TO hoytt;
+
+--
+-- Name: ensure_user_exists(text); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.ensure_user_exists(IN p_email text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- Check if user exists; if not, insert them
+  IF NOT EXISTS (SELECT 1 FROM users WHERE email = p_email) THEN
+    INSERT INTO users (email) VALUES (p_email);
+  END IF;
+END;
+$$;
+
+
+ALTER PROCEDURE public.ensure_user_exists(IN p_email text) OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -39,8 +57,8 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.order_groups (
-    order_id integer NOT NULL,
-    user_id integer,
+    order_id uuid DEFAULT gen_random_uuid(),
+    user_id uuid,
     created_at time without time zone
 );
 
@@ -68,6 +86,20 @@ COMMENT ON FUNCTION public.get_orders() IS 'Fetches the orders';
 
 
 --
+-- Name: users; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.users (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    name text,
+    cell character varying,
+    email text NOT NULL
+);
+
+
+ALTER TABLE public.users OWNER TO neondb_owner;
+
+--
 -- Name: code; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
@@ -86,8 +118,8 @@ ALTER TABLE public.code OWNER TO neondb_owner;
 --
 
 CREATE TABLE public.food_orders (
-    id integer NOT NULL,
-    owner_id integer,
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    owner_id uuid,
     is_open boolean DEFAULT true,
     size integer DEFAULT 1,
     expiration time without time zone,
@@ -98,20 +130,6 @@ CREATE TABLE public.food_orders (
 
 
 ALTER TABLE public.food_orders OWNER TO neondb_owner;
-
---
--- Name: users; Type: TABLE; Schema: public; Owner: neondb_owner
---
-
-CREATE TABLE public.users (
-    name text,
-    cell character varying,
-    email text NOT NULL,
-    id integer NOT NULL
-);
-
-
-ALTER TABLE public.users OWNER TO neondb_owner;
 
 --
 -- Name: code code_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner

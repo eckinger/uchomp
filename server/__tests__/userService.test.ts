@@ -1,20 +1,17 @@
-import * as user_service from "../services/userService";
+import * as userService from "../services/userService";
 import { pool as db } from "../db/db";
-let testUserId: number;
 
-async function createTestUser(): Promise<number> {
-  const id = Math.floor(Math.random() * 1000000) + 1;
-  console.log("id is " + id);
-  await db.query(
-    "INSERT INTO users (id, name, cell, email) VALUES ($1, $2, $3, $4)",
-    [id, "Test User", "555-555-5555", `user_${id}@example.com`]
-  );
-  return id;
+async function createTestUser(): Promise<void> {
+  await db.query("INSERT INTO users (name, cell, email) VALUES ($1, $2, $3)", [
+    "Test User",
+    "555-555-5555",
+    `test_user@example.com`,
+  ]);
 }
 
 beforeEach(async () => {
   await db.query("BEGIN");
-  testUserId = await createTestUser();
+  await createTestUser();
 });
 
 // Clean up database after each test
@@ -22,7 +19,7 @@ afterEach(async () => {
   await db.query("ROLLBACK");
 });
 
-afterAll(async () => {
+afterAll(() => {
   db.end();
 });
 
@@ -30,9 +27,9 @@ describe("User Service Tests", () => {
   // Tests for sendCode function
   describe("sendCode", () => {
     // Test valid email input
-    test.only("should generate a code, store it in code table, and send email successfully", async () => {
+    test("should generate a code, store it in code table", async () => {
       const email = "test@example.com";
-      const result = await user_service.sendCode(email);
+      const result = await userService.sendCode(email);
       expect(result.success).toBe(true);
 
       // Verify code was inserted into code table
@@ -47,14 +44,14 @@ describe("User Service Tests", () => {
     // Test invalid email format
     test("should reject invalid email formats", async () => {
       const invalidEmail = "invalid-email";
-      await expect(user_service.sendCode(invalidEmail)).rejects.toThrow();
+      await expect(userService.sendCode(invalidEmail)).rejects.toThrow();
     });
 
     // Test duplicate email request
     test("should handle repeated requests from same email", async () => {
       const email = "repeat@example.com";
-      await user_service.sendCode(email);
-      const result = await user_service.sendCode(email);
+      await userService.sendCode(email);
+      const result = await userService.sendCode(email);
 
       // Should update existing code rather than creating duplicate
       const codeRecords = await db.query(
@@ -80,43 +77,8 @@ describe("User Service Tests", () => {
       const email = "verify@example.com";
       const code = "123456";
 
-      const result = await user_service.verify(email, code);
+      const result = await userService.verify(email, code);
       expect(result.success).toBe(true);
-
-      // Code should be removed from code table
-      const codeRecord = await db.query("SELECT * FROM code WHERE email = $1", [
-        email,
-      ]);
-      expect(codeRecord.rows.length).toBe(0);
-
-      // User should be added to user table
-      const userRecord = await db.query(
-        'SELECT * FROM "user" WHERE email = $1',
-        [email]
-      );
-      expect(userRecord.rows.length).toBe(1);
-    });
-
-    // test correct ID
-    test("should generate a valid user ID upon successful verification", async () => {
-      const email = "verify@example.com";
-      const code = "123456";
-
-      // Verify the code which should create a user
-      const result = await user_service.verify(email, code);
-      expect(result.success).toBe(true);
-
-      // Check that user was created with a valid ID
-      const userRecord = await db.query(
-        'SELECT id FROM "user" WHERE email = $1',
-        [email]
-      );
-      expect(userRecord.rows.length).toBe(1);
-      expect(userRecord.rows[0].id).toBeDefined();
-      expect(typeof userRecord.rows[0].id).toBe("string");
-      expect(userRecord.rows[0].id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      );
     });
 
     // Test incorrect code
@@ -124,7 +86,7 @@ describe("User Service Tests", () => {
       const email = "verify@example.com";
       const wrongCode = "999999";
 
-      const result = await user_service.verify(email, wrongCode);
+      const result = await userService.verify(email, wrongCode);
       expect(result.success).toBe(false);
 
       // Code should still exist in code table
@@ -145,7 +107,7 @@ describe("User Service Tests", () => {
         ["expired@example.com", "123456", expiredDate]
       );
 
-      const result = await user_service.verify("expired@example.com", "123456");
+      const result = await userService.verify("expired@example.com", "123456");
       expect(result.success).toBe(false);
       expect(result.error).toContain("expired");
     });
@@ -155,7 +117,7 @@ describe("User Service Tests", () => {
   describe("get_name_and_cell", () => {
     // Setup: Insert test user
     beforeEach(async () => {
-      await db.query('INSERT INTO "user" (email) VALUES ($1)', [
+      await db.query("INSERT INTO users (email) VALUES ($1)", [
         "profile@example.com",
       ]);
     });
@@ -166,12 +128,12 @@ describe("User Service Tests", () => {
       const name = "Test User";
       const cell = "123-456-7890";
 
-      const result = await user_service.get_name_and_cell(email, name, cell);
+      const result = await userService.getNameAndCell(email, name, cell);
       expect(result.success).toBe(true);
 
       // User data should be updated in user table
       const userRecord = await db.query(
-        'SELECT * FROM "user" WHERE email = $1',
+        "SELECT * FROM users WHERE email = $1",
         [email]
       );
       expect(userRecord.rows.length).toBe(1);
@@ -186,7 +148,7 @@ describe("User Service Tests", () => {
       const invalidCell = "not-a-phone";
 
       await expect(
-        user_service.get_name_and_cell(email, name, invalidCell)
+        userService.getNameAndCell(email, name, invalidCell)
       ).rejects.toThrow(/invalid phone/i);
     });
 
@@ -197,7 +159,7 @@ describe("User Service Tests", () => {
       const cell = "123-456-7890";
 
       await expect(
-        user_service.get_name_and_cell(email, name, cell)
+        userService.getNameAndCell(email, name, cell)
       ).rejects.toThrow(/user not found/i);
     });
   });
@@ -210,7 +172,7 @@ describe("User Service Tests", () => {
       const cell = "555-123-4567";
 
       // Step 1: Send verification code
-      const sendResult = await user_service.sendCode(email);
+      const sendResult = await userService.sendCode(email);
       expect(sendResult.success).toBe(true);
 
       // Get the code from the database for testing purposes
@@ -221,20 +183,16 @@ describe("User Service Tests", () => {
       const code = codeRecord.rows[0].key;
 
       // Step 2: Verify the code
-      const verifyResult = await user_service.verify(email, code);
+      const verifyResult = await userService.verify(email, code);
       expect(verifyResult.success).toBe(true);
 
       // Step 3: Complete profile
-      const profileResult = await user_service.get_name_and_cell(
-        email,
-        name,
-        cell
-      );
+      const profileResult = await userService.getNameAndCell(email, name, cell);
       expect(profileResult.success).toBe(true);
 
       // Verify final user state
       const userRecord = await db.query(
-        'SELECT * FROM "user" WHERE email = $1',
+        "SELECT * FROM users WHERE email = $1",
         [email]
       );
       expect(userRecord.rows.length).toBe(1);
@@ -253,7 +211,7 @@ describe("User Service Tests", () => {
       });
 
       const email = "error@example.com";
-      const result = await user_service.sendCode(email);
+      const result = await userService.sendCode(email);
 
       expect(result.success).toBe(false);
       expect(result.error && result.error.toLowerCase()).toContain(

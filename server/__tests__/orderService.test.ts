@@ -7,21 +7,23 @@ let testUserId: string;
 async function createTestUser(): Promise<string> {
   const id = randomUUID();
   await db.query(
-    'INSERT INTO "user" (id, email, name, cell) VALUES ($1, $2, $3, $4)',
+    "INSERT INTO users (id, email, name, cell) VALUES ($1, $2, $3, $4)",
     [id, `user_${id}@example.com`, "Test User", "555-555-5555"]
   );
   return id;
 }
 
 beforeEach(async () => {
+  await db.query("BEGIN");
   testUserId = await createTestUser();
 });
 
 afterEach(async () => {
-  await db.query("DELETE FROM food_order");
-  await db.query("DELETE FROM order_group");
-  await db.query("DELETE FROM code");
-  await db.query('DELETE FROM "user"');
+  await db.query("ROLLBACK");
+});
+
+afterAll(() => {
+  db.end();
 });
 
 // Currently, we assume we have a `db` variable for our tests
@@ -157,7 +159,7 @@ describe("Order Service Tests", () => {
       const userEmail = "longname@example.com";
       const longNameUserId = randomUUID();
 
-      await db.query('INSERT INTO "user" (id, email) VALUES ($1, $2)', [
+      await db.query("INSERT INTO users (id, email) VALUES ($1, $2)", [
         longNameUserId,
         userEmail,
       ]);
@@ -264,11 +266,11 @@ describe("Order Service Tests", () => {
       const code = codeRecord.rows[0].key;
 
       await user_service.verify(email, code);
-      await user_service.get_name_and_cell(email, "New User", "555-123-7890");
+      await user_service.getNameAndCell(email, "New User", "555-123-7890");
 
       // Get user ID
       const userRecord = await db.query(
-        'SELECT id FROM "user" WHERE email = $1',
+        "SELECT id FROM users WHERE email = $1",
         [email]
       );
       const userId = userRecord.rows[0].id;
