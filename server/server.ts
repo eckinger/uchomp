@@ -46,55 +46,66 @@ app.post("/send-code", async (req: Request, res: Response) => {
 });
 
 // API: Verify Code
-app.post("/verify", async (req, res) => {
-    const { email, key } = req.body;
-    try {
-      const result = await userService.verify(email, key);
-      res.status(result.success ? 200 : 400).json(result);
-    } catch (err) {
-      console.error("Error in /verify:", err);
-      res.status(500).json({ success: false, error: "Server error" });
-    }
-  });
+app.post("/verify", async (req: Request, res: Response) => {
+  const { email, key } = req.body;
+  try {
+    const result = await userService.verify(email, key);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /verify:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
 
 // API: Update Profile (name + cell)
 app.post("/update-profile", async (req: Request, res: Response) => {
-    const { email, name, cell } = req.body;
-    try {
-      const result = await userService.get_name_and_cell(email, name, cell);
-      res.status(result.success ? 200 : 400).json(result);
-    } catch (err) {
-      console.error("Error in /update-profile:", err);
-      res.status(500).json({ success: false, error: "Server error" });
-    }
+  const { email, name, cell } = req.body;
+  try {
+    const result = await userService.get_name_and_cell(email, name, cell);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /update-profile:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
 });
 
 // API: Create Order
 app.post("/create-order", async (req: Request, res: Response) => {
-    const { owner_id, restaurant, expiration, loc } = req.body;
-  
-    try {
-      const result = await orderService.create_order(owner_id, restaurant, expiration, loc);
-      res.status(result.success ? 200 : 400).json(result);
-    } catch (err) {
-      console.error("Error in /create-order:", err);
-      res.status(500).json({ success: false, error: "Server error" });
-    }
+  const { owner_id, restaurant, expiration, loc } = req.body;
+
+  try {
+    const result = await orderService.create_order(owner_id, restaurant, expiration, loc);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /create-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
 });
 
 // API: Delete Order
 app.delete("/delete-order/:id", async (req: Request, res: Response) => {
-    const orderId = parseInt(req.params.id);
-  
-    try {
-      const result = await orderService.delete_order(orderId);
-      res.status(result.success ? 200 : 400).json(result);
-    } catch (err) {
-      console.error("Error in /delete-order:", err);
-      res.status(500).json({ success: false, error: "Server error" });
-    }
+  const orderId = parseInt(req.params.id);
+
+  try {
+    const result = await orderService.delete_order(orderId);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /delete-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
 });
-  
+
+// API: Get Orders
+app.get("/orders", async (req: Request, res: Response) => {
+  try {
+    const result = await orderService.get_orders();
+    res.status(result.success ? 200 : 400).json(result.orders || []);
+  } catch (err) {
+    console.error("Error in /orders:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 
 // API: List Users
 app.get("/api/users", async (_req: Request, res: Response) => {

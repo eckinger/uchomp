@@ -62,6 +62,24 @@ Invoke-RestMethod -Uri "http://localhost:5151/delete-order/<order_id>" `
 Expected Output:
 { "success": true }
 
+Get Orders:
+Invoke-RestMethod -Uri "http://localhost:5151/orders" `
+  -Method GET
+
+Expected Output:
+[
+  {
+    "id": 1,
+    "owner_id": "user-id-from-db",
+    "restaurant": "Pizza Palace",
+    "expiration": "2025-05-06T23:59:00Z",
+    "loc": "Regenstein Library",
+    "participant_count": 3,
+    "participants": ["user-id-1", "user-id-2", "user-id-3"]
+  },
+  ...
+]
+
 The implementation includes two core service modules: `userService.ts` and `orderService.ts`.
 
 In `userService.ts`, the following functionality was implemented:
@@ -73,6 +91,7 @@ In `userService.ts`, the following functionality was implemented:
 In `orderService.ts`, the following logic was implemented:
 - `create_order(owner_id, restaurant, expiration, loc)`: Accepts a user ID (must exist in the `user` table), restaurant name (must be provided), expiration time (must be in the future), and a location (must be one of the predefined `locs` enum values). If validation passes, the order is inserted into the `food_order` table.
 - `delete_order(order_id)`: Deletes the order with the specified ID from the `food_order` table.
+- `get_orders()`: Retrieves all active food orders (where expiration is in the future) along with the count and list of participants for each order. Orders are sorted by expiration date in ascending order.
 
 The backend server was refactored from a single JavaScript file (`server.js`) to a modular and strictly typed TypeScript setup (`server.ts`). The original `server.js` only included a GET route to fetch users and lacked structured validation or business logic. The new `server.ts` introduces:
 - POST `/send-code`: Triggers a verification code to the specified email.
@@ -80,6 +99,7 @@ The backend server was refactored from a single JavaScript file (`server.js`) to
 - POST `/update-profile`: Updates a user’s full name and cell number.
 - POST `/create-order`: Adds a new food order to the system.
 - DELETE `/delete-order/:id`: Removes a specific food order by ID.
+- GET `/orders`: Retrieves all active food orders with participant information.
 - GET `/api/users`: Lists all users in the system.
 
 Additionally, the PostgreSQL schema was modernized. In the old schema, the order model involved an ambiguous relation between `order_group`, `food_order`, and `user`, and lacked structured phone/email fields. The new schema now includes:
