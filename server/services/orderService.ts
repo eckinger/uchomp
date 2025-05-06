@@ -1,5 +1,10 @@
 import { pool } from "../db/db";
 
+export async function getOrders() {
+  const result = await pool.query("SELECT * FROM get_orders()");
+  return result.rows;
+}
+
 // Create a new food order
 export async function create_order(
   owner_id: number | string,
@@ -22,7 +27,6 @@ export async function create_order(
       throw new Error("Expiration must be in the future.");
     }
 
-
     // Validate location against enum values
     const validLocations = [
       "Regenstein Library",
@@ -34,10 +38,9 @@ export async function create_order(
     }
 
     // Confirm user exists
-    const userCheck = await pool.query(
-      `SELECT id FROM "user" WHERE id = $1`,
-      [owner_id]
-    );
+    const userCheck = await pool.query(`SELECT id FROM "user" WHERE id = $1`, [
+      owner_id,
+    ]);
     if (userCheck.rows.length === 0) {
       throw new Error("User not found.");
     }
@@ -58,29 +61,29 @@ export async function create_order(
 }
 
 // Delete an existing food order
-export async function delete_order(order_id: number): Promise<{ success: boolean; error?: string }> {
+export async function delete_order(
+  order_id: number
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if the order exists
     const checkOrder = await pool.query(
       `SELECT id FROM food_order WHERE id = $1`,
       [order_id]
     );
-    
+
     if (checkOrder.rows.length === 0) {
       return { success: false, error: "Order not found." };
     }
 
     // Delete related rows in order_group first (if ON DELETE CASCADE isn't set)
-    await pool.query(
-      `DELETE FROM order_group WHERE food_order_id = $1`,
-      [order_id]
-    );
+    await pool.query(`DELETE FROM order_group WHERE food_order_id = $1`, [
+      order_id,
+    ]);
 
     // Delete the order
-    const result = await pool.query(
-      `DELETE FROM food_order WHERE id = $1`,
-      [order_id]
-    );
+    const result = await pool.query(`DELETE FROM food_order WHERE id = $1`, [
+      order_id,
+    ]);
 
     if (result.rowCount === 0) {
       return { success: false, error: "Order not found." };

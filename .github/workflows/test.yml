@@ -1,0 +1,34 @@
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: uchomps_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23
+
+      - name: Install deps
+        run: npm install
+
+      - name: Setup DB Schema
+        run: psql -h localhost -U postgres -d uchomps_test -f schema.sql
+        env:
+          PGPASSWORD: password
+
+      - name: Run tests
+        run: npm test
