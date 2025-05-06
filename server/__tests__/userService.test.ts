@@ -1,36 +1,38 @@
 import * as user_service from "../services/userService";
 import { pool as db } from "../db/db";
-import { randomUUID } from "crypto";
-let testUserId: string;
+let testUserId: number;
 
-async function createTestUser(): Promise<string> {
-  const id = randomUUID();
+async function createTestUser(): Promise<number> {
+  const id = Math.floor(Math.random() * 1000000) + 1;
+  console.log("id is " + id);
   await db.query(
-    'INSERT INTO "user" (id, email, name, cell) VALUES ($1, $2, $3, $4)',
-    [id, `user_${id}@example.com`, "Test User", "555-555-5555"]
+    "INSERT INTO users (id, name, cell, email) VALUES ($1, $2, $3, $4)",
+    [id, "Test User", "555-555-5555", `user_${id}@example.com`]
   );
   return id;
 }
 
 beforeEach(async () => {
+  await db.query("BEGIN");
   testUserId = await createTestUser();
 });
 
 // Clean up database after each test
 afterEach(async () => {
-  await db.query("DELETE FROM food_order");
-  await db.query("DELETE FROM order_group");
-  await db.query("DELETE FROM code");
-  await db.query('DELETE FROM "user"');
+  await db.query("ROLLBACK");
+});
+
+afterAll(async () => {
+  db.end();
 });
 
 describe("User Service Tests", () => {
-  // Tests for send_code function
-  describe("send_code", () => {
+  // Tests for sendCode function
+  describe("sendCode", () => {
     // Test valid email input
-    test("should generate a code, store it in code table, and send email successfully", async () => {
+    test.only("should generate a code, store it in code table, and send email successfully", async () => {
       const email = "test@example.com";
-      const result = await user_service.send_code(email);
+      const result = await user_service.sendCode(email);
       expect(result.success).toBe(true);
 
       // Verify code was inserted into code table
@@ -45,14 +47,14 @@ describe("User Service Tests", () => {
     // Test invalid email format
     test("should reject invalid email formats", async () => {
       const invalidEmail = "invalid-email";
-      await expect(user_service.send_code(invalidEmail)).rejects.toThrow();
+      await expect(user_service.sendCode(invalidEmail)).rejects.toThrow();
     });
 
     // Test duplicate email request
     test("should handle repeated requests from same email", async () => {
       const email = "repeat@example.com";
-      await user_service.send_code(email);
-      const result = await user_service.send_code(email);
+      await user_service.sendCode(email);
+      const result = await user_service.sendCode(email);
 
       // Should update existing code rather than creating duplicate
       const codeRecords = await db.query(
@@ -208,7 +210,7 @@ describe("User Service Tests", () => {
       const cell = "555-123-4567";
 
       // Step 1: Send verification code
-      const sendResult = await user_service.send_code(email);
+      const sendResult = await user_service.sendCode(email);
       expect(sendResult.success).toBe(true);
 
       // Get the code from the database for testing purposes
@@ -251,7 +253,7 @@ describe("User Service Tests", () => {
       });
 
       const email = "error@example.com";
-      const result = await user_service.send_code(email);
+      const result = await user_service.sendCode(email);
 
       expect(result.success).toBe(false);
       expect(result.error && result.error.toLowerCase()).toContain(
