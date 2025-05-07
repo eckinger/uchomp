@@ -154,3 +154,15 @@ Additionally, the PostgreSQL schema was modernized. In the old schema, the order
 - A `codes` table with composite primary keys on `email` and `key`, used for temporary verification codes.
 - A `food_orders` table which now explicitly uses `id` referencing a user, and adds `restaurant`, `expiration` as a timestamp, and `location`, a constrained enum (`Regenstein Library`, `Harper Library`, or `John Crerar Library`).
 - An `order_groups` table referencing both a user and a food order with properly enforced foreign keys and cascading deletes.
+
+# Contributions
+
+### Backend: Andrew
+- Implemented first iteration of orderSevice.ts and userService.ts
+- Changed test files from .js to .ts and moved them to server instead of client
+- Changed server.js to server.ts and moved to server folder
+- Contributed to first iteration of server.ts implementing api calls verify, update-profile, create-order, and delete-order
+- Assisted in creating the schema.sql
+- Assisted in README.md
+- Assisted in TestCaseChanges.md
+- Contributed in testing the server functionality, and reviewing code implemented
