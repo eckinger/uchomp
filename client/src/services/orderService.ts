@@ -10,7 +10,7 @@ export default class OrderService {
     loc: string
   ) {
     try {
-      const response = await apiClient.post("/create-order", {
+      const response = await apiClient.post("/orders/create-order", {
         owner_id: ownerId,
         restaurant,
         expiration,
@@ -25,7 +25,9 @@ export default class OrderService {
 
   async deleteOrder(orderId: number) {
     try {
-      const response = await apiClient.delete(`/delete-order/${orderId}`);
+      const response = await apiClient.delete(
+        `/orders/delete-order/${orderId}`
+      );
       return response.data;
     } catch (error) {
       console.error("Error deleting order:", error);

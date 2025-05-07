@@ -1,34 +1,36 @@
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 export default class UserService {
-  constructor() { }
-
   async sendCode(email: string) {
     try {
-      const response = await apiClient.post('/send-code', { email });
+      const response = await apiClient.post("/users/send-code", { email });
       return response.data;
     } catch (error) {
-      console.error('Error sending verification code:', error);
+      console.error("Error sending verification code:", error);
       throw error;
     }
   }
 
   async verify(email: string, key: string) {
     try {
-      const response = await apiClient.post('/verify', { email, key });
+      const response = await apiClient.post("/users/verify", { email, key });
       return response.data;
     } catch (error) {
-      console.error('Error verifying code:', error);
+      console.error("Error verifying code:", error);
       throw error;
     }
   }
 
   async updateProfile(email: string, name: string, cell: string) {
     try {
-      const response = await apiClient.post('/update-profile', { email, name, cell });
+      const response = await apiClient.post("/users/update-profile", {
+        email,
+        name,
+        cell,
+      });
       return response.data;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
       throw error;
     }
   }
