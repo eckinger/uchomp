@@ -1,8 +1,6 @@
 import apiClient from "./apiClient";
 
 export default class OrderService {
-  constructor() {}
-
   async createOrder(
     ownerId: string,
     restaurant: string,
