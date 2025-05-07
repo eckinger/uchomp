@@ -173,7 +173,16 @@ Additionally, the PostgreSQL schema was modernized. In the old schema, the order
 
 ### Frontend + Backend: Ben
 
+- Designed frontend mockups
 - Scaffolded routing for the frontend
 - Setup docker configuration
 - Migrated backend code into SQL stored procedures and functions
 - Architected the infrastructure of the frontend and backend (refactoring, naming conventions, general architecture)
+
+### Frontend + (a tiny bit of) Backend : Mai
+
+- Overall responsible for all client/src code
+- Designed frontend mockups
+- Built React pages and components
+- Set up frontend service layer for API integration with the backend
+- Added GET /orders endpoint to backend
