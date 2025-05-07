@@ -14,3 +14,36 @@ export const loginUser: RequestHandler = async (req, res) => {
     });
   }
 };
+
+export const emailCodeToUser: RequestHandler = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await userService.sendCode(email);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /send-code:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const verifyEmail: RequestHandler = async (req, res) => {
+  const { email, key } = req.body;
+  try {
+    const result = await userService.verify(email, key);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /verify:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const updateAccountInformation: RequestHandler = async (req, res) => {
+  const { email, name, cell } = req.body;
+  try {
+    const result = await userService.updateNameAndCell(email, name, cell);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /update-profile:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};

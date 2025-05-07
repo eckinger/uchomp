@@ -1,8 +1,14 @@
 import express from "express";
-import { listOrders } from "../controllers/orderController";
+import {
+  getActiveOrders,
+  createOrder,
+  deleteOrder,
+} from "../controllers/orderController";
 
 const router = express.Router();
 
-router.get("", listOrders);
+router.get("", getActiveOrders);
+router.post("/create", createOrder);
+router.post("/delete/:id", deleteOrder);
 
 export default router;

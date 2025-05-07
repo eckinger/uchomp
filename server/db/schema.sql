@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 17.4 (Debian 17.4-1.pgdg120+2)
+-- Dumped from database version 17.4 (Postgres.app)
 -- Dumped by pg_dump version 17.4 (Postgres.app)
 
 SET statement_timeout = 0;
@@ -18,7 +18,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: locs; Type: TYPE; Schema: public; Owner: neondb_owner
+-- Name: locs; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.locs AS ENUM (
@@ -28,10 +28,8 @@ CREATE TYPE public.locs AS ENUM (
 );
 
 
-ALTER TYPE public.locs OWNER TO neondb_owner;
-
 --
--- Name: create_food_order(uuid, text, timestamp with time zone, public.locs); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: create_food_order(uuid, text, timestamp with time zone, public.locs); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.create_food_order(p_owner_id uuid, p_restaurant text, p_expiration timestamp with time zone, p_location public.locs) RETURNS TABLE(success boolean, order_id uuid, error text)
@@ -69,10 +67,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.create_food_order(p_owner_id uuid, p_restaurant text, p_expiration timestamp with time zone, p_location public.locs) OWNER TO postgres;
-
 --
--- Name: create_verification_code(text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: create_verification_code(text, integer); Type: PROCEDURE; Schema: public; Owner: -
 --
 
 CREATE PROCEDURE public.create_verification_code(IN p_email text, IN p_key integer)
@@ -87,10 +83,8 @@ END;
 $$;
 
 
-ALTER PROCEDURE public.create_verification_code(IN p_email text, IN p_key integer) OWNER TO postgres;
-
 --
--- Name: delete_order(uuid); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: delete_order(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.delete_order(p_order_id uuid) RETURNS TABLE(success boolean, error text)
@@ -118,10 +112,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.delete_order(p_order_id uuid) OWNER TO postgres;
-
 --
--- Name: ensure_user_exists(text); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: ensure_user_exists(text); Type: PROCEDURE; Schema: public; Owner: -
 --
 
 CREATE PROCEDURE public.ensure_user_exists(IN p_email text)
@@ -136,47 +128,40 @@ END;
 $$;
 
 
-ALTER PROCEDURE public.ensure_user_exists(IN p_email text) OWNER TO postgres;
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
 --
--- Name: order_groups; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: get_active_orders(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE TABLE public.order_groups (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    user_id uuid,
-    created_at time without time zone
-);
-
-
-ALTER TABLE public.order_groups OWNER TO neondb_owner;
-
---
--- Name: get_orders(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_orders() RETURNS SETOF public.order_groups
-    LANGUAGE sql
+CREATE FUNCTION public.get_active_orders() RETURNS TABLE(id uuid, owner_id uuid, restaurant text, expiration timestamp without time zone, loc public.locs, participant_count bigint, participants uuid[])
+    LANGUAGE plpgsql
     AS $$
-SELECT * FROM order_groups;
+BEGIN
+  RETURN QUERY
+  SELECT
+    fo.id,
+    fo.owner_id,
+    fo.restaurant,
+    fo.expiration,
+    fo.location,
+    (
+      SELECT COUNT(og.user_id)
+      FROM order_groups og
+      WHERE og.food_order_id = fo.id
+    ) AS participant_count,
+    (
+      SELECT ARRAY_AGG(og.user_id)
+      FROM order_groups og
+      WHERE og.food_order_id = fo.id
+    ) AS participants
+  FROM food_orders fo
+  WHERE fo.expiration > NOW()
+  ORDER BY fo.expiration ASC;
+END;
 $$;
 
 
-ALTER FUNCTION public.get_orders() OWNER TO postgres;
-
 --
--- Name: FUNCTION get_orders(); Type: COMMENT; Schema: public; Owner: postgres
---
-
-COMMENT ON FUNCTION public.get_orders() IS 'Fetches the orders';
-
-
---
--- Name: update_name_and_cell(text, text, text); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_name_and_cell(text, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_name_and_cell(p_email text, p_name text, p_cell text) RETURNS TABLE(success boolean, error text)
@@ -209,10 +194,8 @@ END;
 $_$;
 
 
-ALTER FUNCTION public.update_name_and_cell(p_email text, p_name text, p_cell text) OWNER TO postgres;
-
 --
--- Name: verify_user_code(text, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: verify_user_code(text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.verify_user_code(p_email text, p_code integer) RETURNS TABLE(success boolean, error text)
@@ -257,10 +240,12 @@ END;
 $$;
 
 
-ALTER FUNCTION public.verify_user_code(p_email text, p_code integer) OWNER TO postgres;
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
 
 --
--- Name: codes; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: codes; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.codes (
@@ -271,10 +256,8 @@ CREATE TABLE public.codes (
 );
 
 
-ALTER TABLE public.codes OWNER TO neondb_owner;
-
 --
--- Name: food_orders; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: food_orders; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.food_orders (
@@ -289,10 +272,20 @@ CREATE TABLE public.food_orders (
 );
 
 
-ALTER TABLE public.food_orders OWNER TO neondb_owner;
+--
+-- Name: order_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.order_groups (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    food_order_id uuid,
+    user_id uuid,
+    created_at time without time zone
+);
+
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.users (
@@ -303,10 +296,8 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO neondb_owner;
-
 --
--- Name: codes codes_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: codes codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.codes
@@ -314,7 +305,7 @@ ALTER TABLE ONLY public.codes
 
 
 --
--- Name: food_orders food_order_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: food_orders food_order_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.food_orders
@@ -322,7 +313,7 @@ ALTER TABLE ONLY public.food_orders
 
 
 --
--- Name: order_groups order_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: order_groups order_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.order_groups
@@ -330,7 +321,7 @@ ALTER TABLE ONLY public.order_groups
 
 
 --
--- Name: users user_cell_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: users user_cell_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -338,7 +329,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: users user_email_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: users user_email_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -346,7 +337,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: users user_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: users user_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -354,7 +345,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: food_orders food_order_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: food_orders food_order_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.food_orders
@@ -362,7 +353,15 @@ ALTER TABLE ONLY public.food_orders
 
 
 --
--- Name: order_groups order_groups_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: order_groups order_groups_food_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.order_groups
+    ADD CONSTRAINT order_groups_food_order_id_fkey FOREIGN KEY (food_order_id) REFERENCES public.food_orders(id);
+
+
+--
+-- Name: order_groups order_groups_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.order_groups
@@ -370,7 +369,7 @@ ALTER TABLE ONLY public.order_groups
 
 
 --
--- Name: order_groups order_groups_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: order_groups order_groups_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.order_groups
@@ -380,3 +379,4 @@ ALTER TABLE ONLY public.order_groups
 --
 -- PostgreSQL database dump complete
 --
+

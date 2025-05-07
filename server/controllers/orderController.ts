@@ -1,14 +1,41 @@
 import { RequestHandler } from "express";
 import * as orderService from "../services/orderService";
 
-export const listOrders: RequestHandler = async (_req, res) => {
+export const getActiveOrders: RequestHandler = async (_req, res) => {
   try {
     const result = await orderService.getOrders();
-    res.status(200).json(result);
+    res.status(result.success ? 200 : 400).json(result.orders || []);
   } catch (err) {
-    res.status(500).json({
-      error:
-        "An unexpected server error occurred. Error: " + JSON.stringify(err),
-    });
+    console.error("Error in /orders:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const createOrder: RequestHandler = async (req, res) => {
+  const { owner_id, restaurant, expiration, loc } = req.body;
+
+  try {
+    const result = await orderService.createOrder(
+      owner_id,
+      restaurant,
+      expiration,
+      loc
+    );
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /create-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const deleteOrder: RequestHandler = async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    const result = await orderService.deleteOrder(orderId);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /delete-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
   }
 };
