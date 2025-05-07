@@ -1,14 +1,37 @@
+<<<<<<< HEAD
 'use client';
 
 import { useState } from 'react';
 import { PlusCircle, Clock, Users, MapPin } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import VerificationModal from '../components/VerificationModal';
+=======
+"use client";
+
+import { useEffect, useState } from "react";
+import { PlusCircle, Clock, Users, MapPin } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import OrderService from "services/orderService";
+import VerificationModal from "../components/VerificationModal";
+>>>>>>> bburgess/docker-for-testing
 
 export default function ViewGroups() {
   const navigate = useNavigate();
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+<<<<<<< HEAD
   const [selectedLocation, setSelectedLocation] = useState('University Library');
+=======
+  const [selectedLocation, setSelectedLocation] =
+    useState("University Library");
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      const service = new OrderService();
+      await service.getOrders();
+    };
+    fetchOrders();
+  }, []);
+>>>>>>> bburgess/docker-for-testing
 
   // Sample data for order cards
   const orders = [
@@ -17,36 +40,52 @@ export default function ViewGroups() {
       restaurant: "Burrito Bros",
       time: "15 min",
       orderTime: "7:15 PM",
+<<<<<<< HEAD
       participants: 3
+=======
+      participants: 3,
+>>>>>>> bburgess/docker-for-testing
     },
     {
       id: 2,
       restaurant: "Pizza Palace",
       time: "25 min",
       orderTime: "7:25 PM",
+<<<<<<< HEAD
       participants: 2
+=======
+      participants: 2,
+>>>>>>> bburgess/docker-for-testing
     },
     {
       id: 3,
       restaurant: "Sushi Express",
       time: "20 min",
       orderTime: "7:20 PM",
+<<<<<<< HEAD
       participants: 4
+=======
+      participants: 4,
+>>>>>>> bburgess/docker-for-testing
     },
     {
       id: 4,
       restaurant: "Thai Delight",
       time: "90 min",
       orderTime: "8:30 PM",
+<<<<<<< HEAD
       participants: 2
+=======
+      participants: 2,
+>>>>>>> bburgess/docker-for-testing
     },
     {
       id: 5,
       restaurant: "Sandwich Shop",
       time: "10 min",
       orderTime: "7:10 PM",
-      participants: 3
-    }
+      participants: 3,
+    },
   ];
 
   const locations = [
@@ -54,7 +93,7 @@ export default function ViewGroups() {
     "Student Center",
     "Engineering Building",
     "Science Hall",
-    "Dorm Commons"
+    "Dorm Commons",
   ];
 
   const handleCreateClick = () => {
@@ -63,7 +102,7 @@ export default function ViewGroups() {
 
   const handleVerified = () => {
     // Navigate to create group page after verification
-    navigate('/groups/create');
+    navigate("/groups/create");
   };
 
   return (
@@ -79,8 +118,10 @@ export default function ViewGroups() {
               onChange={(e) => setSelectedLocation(e.target.value)}
               className="py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
-              {locations.map(location => (
-                <option key={location} value={location}>{location}</option>
+              {locations.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
               ))}
             </select>
           </div>
@@ -89,11 +130,13 @@ export default function ViewGroups() {
 
       {/* Main content with order cards */}
       <main className="container mx-auto px-4 py-6 flex-grow">
-        <h2 className="text-xl font-semibold mb-4">Active Groups at {selectedLocation}</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Active Groups at {selectedLocation}
+        </h2>
 
         {orders.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {orders.map(order => (
+            {orders.map((order) => (
               <div
                 key={order.id}
                 className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer border-l-4 border-orange-500"
@@ -143,12 +186,12 @@ export default function ViewGroups() {
         onClose={() => setIsVerificationOpen(false)}
         onVerified={handleVerified}
         groupData={{
-          restaurant: '',
+          restaurant: "",
           location: selectedLocation,
           orderTime: new Date().toISOString(),
-          maxParticipants: 4
+          maxParticipants: 4,
         }}
       />
     </div>
   );
-} 
+}
