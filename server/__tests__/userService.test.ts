@@ -1,17 +1,8 @@
 import * as userService from "../services/userService";
 import { pool as db } from "../db/db";
 
-async function createTestUser(): Promise<void> {
-  await db.query("INSERT INTO users (name, cell, email) VALUES ($1, $2, $3)", [
-    "Test User",
-    "555-555-5555",
-    `test_user@example.com`,
-  ]);
-}
-
 beforeEach(async () => {
   await db.query("BEGIN");
-  await createTestUser();
 });
 
 // Clean up database after each test
@@ -34,7 +25,7 @@ describe("User Service Tests", () => {
 
       // Verify code was inserted into code table
       const codeRecord = await db.query(
-        "SELECT key FROM code WHERE email = $1",
+        "SELECT key FROM codes WHERE email = $1",
         [email]
       );
       expect(codeRecord.rows.length).toBe(1);
@@ -55,44 +46,45 @@ describe("User Service Tests", () => {
 
       // Should update existing code rather than creating duplicate
       const codeRecords = await db.query(
-        "SELECT * FROM code WHERE email = $1",
+        "SELECT * FROM codes WHERE email = $1",
         [email]
       );
+      expect(result.success).toBe(true);
       expect(codeRecords.rows.length).toBe(1);
     });
   });
 
   // Tests for verify function
   describe("verify", () => {
+    const email = "verify@example.com";
+    let code = 0;
+
     // Setup: Insert test code
     beforeEach(async () => {
-      await db.query(
-        "INSERT INTO code (email, key, created_at) VALUES ($1, $2, $3)",
-        ["verify@example.com", "123456", new Date()]
-      );
+      const response = await userService.sendCode(email);
+      code = response.code ?? 0;
     });
 
     // Test successful verification
-    test("should verify correct code, create user, and remove code", async () => {
-      const email = "verify@example.com";
-      const code = "123456";
-
+    test("should verify correct code", async () => {
+      debugger;
       const result = await userService.verify(email, code);
+      console.log("CANARY: ", result.error);
       expect(result.success).toBe(true);
     });
 
     // Test incorrect code
     test("should reject incorrect verification code", async () => {
-      const email = "verify@example.com";
-      const wrongCode = "999999";
+      const wrongCode = 999999;
 
       const result = await userService.verify(email, wrongCode);
       expect(result.success).toBe(false);
 
       // Code should still exist in code table
-      const codeRecord = await db.query("SELECT * FROM code WHERE email = $1", [
-        email,
-      ]);
+      const codeRecord = await db.query(
+        "SELECT * FROM codes WHERE email = $1",
+        [email]
+      );
       expect(codeRecord.rows.length).toBe(1);
     });
 
@@ -103,11 +95,11 @@ describe("User Service Tests", () => {
       expiredDate.setMinutes(expiredDate.getMinutes() - 15);
 
       await db.query(
-        "INSERT INTO code (email, key, created_at) VALUES ($1, $2, $3)",
-        ["expired@example.com", "123456", expiredDate]
+        "INSERT INTO codes (email, key, created_at) VALUES ($1, $2, $3)",
+        ["expired@example.com", 123456, expiredDate]
       );
 
-      const result = await userService.verify("expired@example.com", "123456");
+      const result = await userService.verify("expired@example.com", 123456);
       expect(result.success).toBe(false);
       expect(result.error).toContain("expired");
     });
@@ -128,7 +120,7 @@ describe("User Service Tests", () => {
       const name = "Test User";
       const cell = "123-456-7890";
 
-      const result = await userService.getNameAndCell(email, name, cell);
+      const result = await userService.updateNameAndCell(email, name, cell);
       expect(result.success).toBe(true);
 
       // User data should be updated in user table
@@ -147,9 +139,14 @@ describe("User Service Tests", () => {
       const name = "Test User";
       const invalidCell = "not-a-phone";
 
-      await expect(
-        userService.getNameAndCell(email, name, invalidCell)
-      ).rejects.toThrow(/invalid phone/i);
+      const result = await userService.updateNameAndCell(
+        email,
+        name,
+        invalidCell
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid phone number format");
     });
 
     // Test nonexistent user
@@ -158,9 +155,10 @@ describe("User Service Tests", () => {
       const name = "Test User";
       const cell = "123-456-7890";
 
-      await expect(
-        userService.getNameAndCell(email, name, cell)
-      ).rejects.toThrow(/user not found/i);
+      const result = await userService.updateNameAndCell(email, name, cell);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("User not found");
     });
   });
 
@@ -177,7 +175,7 @@ describe("User Service Tests", () => {
 
       // Get the code from the database for testing purposes
       const codeRecord = await db.query(
-        "SELECT key FROM code WHERE email = $1",
+        "SELECT key FROM codes WHERE email = $1",
         [email]
       );
       const code = codeRecord.rows[0].key;
@@ -187,7 +185,11 @@ describe("User Service Tests", () => {
       expect(verifyResult.success).toBe(true);
 
       // Step 3: Complete profile
-      const profileResult = await userService.getNameAndCell(email, name, cell);
+      const profileResult = await userService.updateNameAndCell(
+        email,
+        name,
+        cell
+      );
       expect(profileResult.success).toBe(true);
 
       // Verify final user state

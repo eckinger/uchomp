@@ -16,15 +16,10 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "maxWorkers": 1,
-    "verbose": true
-  },
   "scripts": {
     "start": "node dist/server.js",
     "dev": "ts-node server.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "jest"
   }
 }

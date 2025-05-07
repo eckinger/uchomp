@@ -66,7 +66,7 @@ app.post("/verify", async (req, res) => {
 app.post("/update-profile", async (req: Request, res: Response) => {
   const { email, name, cell } = req.body;
   try {
-    const result = await userService.get_name_and_cell(email, name, cell);
+    const result = await userService.updateNameAndCell(email, name, cell);
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     console.error("Error in /update-profile:", err);
@@ -79,7 +79,7 @@ app.post("/create-order", async (req: Request, res: Response) => {
   const { owner_id, restaurant, expiration, loc } = req.body;
 
   try {
-    const result = await orderService.create_order(
+    const result = await orderService.createOrder(
       owner_id,
       restaurant,
       expiration,
@@ -97,7 +97,7 @@ app.delete("/delete-order/:id", async (req: Request, res: Response) => {
   const orderId = parseInt(req.params.id);
 
   try {
-    const result = await orderService.delete_order(orderId);
+    const result = await orderService.deleteOrder(orderId);
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     console.error("Error in /delete-order:", err);

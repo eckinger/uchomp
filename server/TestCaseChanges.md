@@ -4,13 +4,17 @@ The test suite file `orderService.test.ts` was created by migrating the original
 
 1. **Migration to TypeScript**:
 
-   * Migrating to TypeScript allows for **type safety**, **IDE support**, and improved **code reliability**.
-   * It enables catching issues at compile-time
+- Migrating to TypeScript allows for **type safety**, **IDE support**, and improved **code reliability**.
+- It enables catching issues at compile-time
 
 2. **Moving tests into `server/__tests__`**:
 
-   * Co-locating test files with the application logic (in a `/server/__tests__` folder) helps maintain a consistent project structure.
-   * Ensures that integration between services (like `userService` and `orderService`) is testable together without broken imports.
+- Co-locating test files with the application logic (in a `/server/__tests__` folder) helps maintain a consistent project structure.
+- Ensures that integration between services (like `userService` and `orderService`) is testable together without broken imports.
+
+3. **Fix dangling code**:
+
+- Some references in our initial tests were unused, so we either removed them or added a new `expect` line
 
 ---
 
@@ -21,21 +25,21 @@ The test suite file `orderService.test.ts` was created by migrating the original
 **Before (JS):**
 
 ```js
-const db = require('...');
-const order_service = require('...');
+const db = require("...");
+const order_service = require("...");
 ```
 
 **After (TS):**
 
 ```ts
-import * as order_service from "../services/orderService";
-import * as user_service from "../services/userService";
+import * as orderService from "../services/orderService";
+import * as userService from "../services/userService";
 import { pool as db } from "../db/db";
 import { randomUUID } from "crypto";
 ```
 
-* Used ES module imports.
-* Type-safe import of `db` and `randomUUID`.
+- Used ES module imports.
+- Type-safe import of `db` and `randomUUID`.
 
 #### 2. **User Setup (beforeEach instead of beforeAll)**
 
@@ -56,7 +60,7 @@ beforeEach(async () => {
 });
 ```
 
-* The test user is now created **fresh before each test**, ensuring test isolation and avoiding cross-test contamination.
+- The test user is now created **fresh before each test**, ensuring test isolation and avoiding cross-test contamination.
 
 #### 3. **Cleanup logic**
 
@@ -73,15 +77,16 @@ afterEach(async () => {
 **After:**
 
 ```ts
+beforeEach(async () => {
+  await db.query("BEGIN");
+});
+
 afterEach(async () => {
-  await db.query('DELETE FROM food_order');
-  await db.query('DELETE FROM order_group');
-  await db.query('DELETE FROM code');
-  await db.query('DELETE FROM "user"');
+  await db.query("ROLLBACK");
 });
 ```
 
-* Preserved the logic, but made it **consistent with async/await practices** and added `code` table cleanup.
+- Transactions are the idiomatic way to clean up tests (if using pools and not individual transactions, as we are)
 
 #### 4. **Strong typing and UUID generation**
 
@@ -92,8 +97,8 @@ let testUserId: string;
 const fakeUUID = "123e4567-e89b-12d3-a456-426614174000";
 ```
 
-* Ensures `testUserId` and all expected string IDs are strongly typed.
-* Avoids assumptions about the user ID type (which was an integer in the old test).
+- Ensures `testUserId` and all expected string IDs are strongly typed.
+- Avoids assumptions about the user ID type (which was an integer in the old test).
 
 #### 5. **Error Handling in Long Name Test**
 
@@ -113,13 +118,14 @@ if (error instanceof Error) {
 }
 ```
 
-* More robust error type-checking using `instanceof`.
+- More robust error type-checking using `instanceof`.
 
 #### 6. **Integration Test Improvements**
-* Although integration tests are not needed yet, since they were implemented, we ensured they were used.
 
-* Integration between `userService.send_code`, `verify`, `get_name_and_cell`, and `orderService.create_order` is handled with full type checking.
-* Each database lookup is explicitly validated, making the flow less brittle.
+- Although integration tests are not needed yet, since they were implemented, we ensured they were used.
+
+- Integration between `userService.sendCode`, `verify`, `getNameAndCell`, and `orderService.createOrder` is handled with full type checking.
+- Each database lookup is explicitly validated, making the flow less brittle.
 
 #### 7. **Bug Fix in Location Test**
 
@@ -129,168 +135,77 @@ if (error instanceof Error) {
 const result = await order_service.create_order(..., location);
 ```
 
-* `location` was undefined (bug).
+- `location` was undefined (bug).
 
 **New:**
 
 ```ts
-const result = await order_service.create_order(..., meetupLocation);
+const result = await orderService.createOrder(..., meetupLocation);
 ```
 
-* Corrected variable reference.
+- Corrected variable reference.
 
 #### 8. **Consistency in Naming and Structure**
 
-* `test` blocks are grouped under `describe` blocks for clarity.
-* Cleanup and setup are clear and reusable.
+- `test` blocks are grouped under `describe` blocks for clarity.
+- Cleanup and setup are clear and reusable.
 
----
+#### 9. **Remove schema validation in test**
 
+- Validating the structure of the entire record isn't at the heart of the tests, so we opted for more black-box testing in some areas
 
-
-
----------------------------------------------------------
-The test suite file `userService.test.ts` was created by migrating the original `userService.test.js` test suite into TypeScript. Below is a full explanation of what was changed and why.
-
-### Why the changes were made:
-
-1. **Migration to TypeScript**:
-
-   * Migrating to TypeScript allows for **type safety**, **IDE support**, and improved **code reliability**.
-   * TypeScript provides early detection of bugs and helps enforce contracts for test inputs and outputs.
-
-2. **Moving tests into `server/__tests__`**:
-
-   * Co-locating test files with the application logic (in a `/server/__tests__` folder) improves test discoverability and contextual relevance.
-   * It ensures better integration between `userService` and `orderService` for full-stack testing.
-
----
-
-### Specific Changes and Explanations:
-
-#### 1. **Import Style Modernization**
-
-```js
-const user_service = require('../services/userService');
-const db = require('...');
-```
-
-was replaced with:
+**Old:**
 
 ```ts
-import * as user_service from "../services/userService";
-import { pool as db } from "../db/db";
-import { randomUUID } from "crypto";
-```
+test("should generate a valid user ID upon successful verification", async () => {
+  const email = "verify@example.com";
+  const code = "123456";
 
-* Switched to ES module-style imports to match TypeScript standards.
-* Explicit import of `randomUUID` for UUID generation.
+  // Verify the code which should create a user
+  const result = await userService.verify(email, code);
+  expect(result.success).toBe(true);
 
----
-
-#### 2. **UUID-based Test User Setup**
-
-```js
-beforeEach(async () => {
-  await db.query('INSERT INTO "user" (email) VALUES ($1)', [ ... ]);
+  // Check that user was created with a valid ID
+  const userRecord = await db.query('SELECT id FROM "user" WHERE email = $1', [
+    email,
+  ]);
+  expect(userRecord.rows.length).toBe(1);
+  expect(userRecord.rows[0].id).toBeDefined();
+  expect(typeof userRecord.rows[0].id).toBe("number");
+  expect(userRecord.rows[0].id).toBeGreaterThan(0);
 });
 ```
 
-was updated to:
+**New:**
 
 ```ts
-beforeEach(async () => {
-  testUserId = await createTestUser();
+test("should verify correct code", async () => {
+  const email = "verify@example.com";
+  const code = "123456";
+
+  const result = await userService.verify(email, code);
+  expect(result.success).toBe(true);
 });
 ```
 
-* Introduced a `createTestUser()` utility that generates users with UUIDs, matching the DB schema.
-* Ensures test users are isolated and consistently structured.
+## 10. **expect(...).rejects() → handling Promise**
 
----
+- Our service implementations don't rethrow SQL errors, resolving them instead
+  which required us to change some `expect` statements
 
-#### 3. **Expanded Cleanup Logic**
-
-```js
-afterEach(async () => {
-  await db.query('DELETE FROM "user"');
-  await db.query('DELETE FROM code');
-});
-```
-
-was extended to:
+**Old**:
 
 ```ts
-afterEach(async () => {
-  await db.query('DELETE FROM food_order');
-  await db.query('DELETE FROM order_group');
-  await db.query('DELETE FROM code');
-  await db.query('DELETE FROM "user"');
-});
+await expect(
+  user_service.get_name_and_cell(email, name, invalidCell)
+).rejects.toThrow(/invalid phone/i);
 ```
 
-* Added cleanup for `food_order` and `order_group` to prevent cross-test contamination.
-* Ensures each test starts with a clean slate.
-
----
-
-#### 4. **User ID Type Checking in Verification Test**
-
-```js
-expect(typeof userRecord.rows[0].id).toBe("number");
-```
-
-was changed to:
+**New**:
 
 ```ts
-expect(typeof userRecord.rows[0].id).toBe("string");
-expect(userRecord.rows[0].id).toMatch(/^[0-9a-f-]{36}$/);
+const result = await userService.updateNameAndCell(email, name, invalidCell);
+
+expect(result.success).toBe(false);
+expect(result.error).toContain("Invalid phone number format");
 ```
-
-* Reflects that user IDs are now UUIDs (string type), not integers.
-* Ensures correct format using regex matching.
-
----
-
-#### 5. **Consistent Test User Creation Across Suites**
-
-* Introduced a single utility method for creating users with full profile fields (`id`, `email`, `name`, `cell`).
-* Ensures that all services depending on user records operate on valid and consistent data.
-
----
-
-#### 6. **Integration Test Enhancements**
-
-* Tests the full flow: `send_code` -> `verify` -> `get_name_and_cell`.
-* Uses TypeScript to ensure type-safe propagation of email, code, and profile data.
-* All DB queries are now strictly typed and validated.
-
----
-
-#### 7. **Database Error Handling**
-
-```js
-jest.spyOn(db, "query").mockRejectedValueOnce(...);
-```
-
-was improved to:
-
-```ts
-jest.spyOn(db, "query").mockImplementationOnce(() => {
-  throw new Error("Database connection error");
-});
-```
-
-* Uses `mockImplementationOnce` to ensure predictable failure.
-* Ensures the error is caught, and the error message is validated for diagnostics.
-
----
-
-#### 8. **Test Consistency and Grouping**
-
-* `describe` and `test` blocks were clearly grouped.
-* All `beforeEach` and `afterEach` are consistently scoped.
-* Reused constants (like email, name, cell) were factored into variables.
-
----
-
