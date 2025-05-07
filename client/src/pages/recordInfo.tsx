@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState } from 'react';
-import { ArrowLeft, Shield, Mail, Phone, Info } from 'lucide-react';
+import { ArrowLeft, Shield, Phone, Info } from 'lucide-react';
+import UserService from '../services/userService';
 
 interface RecordInfoProps {
   onBack?: () => void;
@@ -27,6 +28,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const userService = new UserService();
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -50,9 +52,27 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
 
     try {
       setIsLoading(true);
-      // TODO: Implement API call to save user info
-      // await saveUserInfo(formData);
-      onContinue(formData);
+      const email = localStorage.getItem('userEmail');
+
+      if (!email) {
+        setErrors({
+          name: 'User email not found. Please verify your email first.',
+        });
+        return;
+      }
+
+      const result = await userService.updateProfile(email, formData.name, formData.phoneNumber);
+
+      if (result.success) {
+        // Store user profile info in localStorage
+        localStorage.setItem('userName', formData.name);
+        localStorage.setItem('userPhone', formData.phoneNumber);
+        onContinue(formData);
+      } else {
+        setErrors({
+          name: result.error || 'Failed to save information. Please try again.',
+        });
+      }
     } catch (error) {
       setErrors({
         name: 'Failed to save information. Please try again.',

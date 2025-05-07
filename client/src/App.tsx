@@ -4,7 +4,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import ViewGroups from "./pages/viewGroups";
 import CreateGroup from "./pages/createGroup";
 import RecordInfo from "./pages/recordInfo";
-import User from "./models/user";
 
 function App() {
   return (

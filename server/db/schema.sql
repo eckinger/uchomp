@@ -380,4 +380,3 @@ ALTER TABLE ONLY public.order_groups
 --
 -- PostgreSQL database dump complete
 --
-

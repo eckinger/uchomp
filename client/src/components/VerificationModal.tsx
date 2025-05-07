@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState } from 'react';
 import { X, Mail, Shield } from 'lucide-react';
+import UserService from '../services/userService';
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const VerificationModal: React.FC<VerificationModalProps> = ({ isOpen, onClose, 
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const userService = new UserService();
 
   if (!isOpen) return null;
 
@@ -29,9 +31,12 @@ const VerificationModal: React.FC<VerificationModalProps> = ({ isOpen, onClose, 
     try {
       setIsLoading(true);
       setError(null);
-      // TODO: Implement API call to send verification code
-      // await sendVerificationCode(email);
-      setStage('code');
+      const result = await userService.sendCode(email);
+      if (result.success) {
+        setStage('code');
+      } else {
+        setError(result.error || 'Failed to send verification code. Please try again.');
+      }
     } catch (err) {
       setError('Failed to send verification code. Please try again.');
     } finally {
@@ -45,10 +50,15 @@ const VerificationModal: React.FC<VerificationModalProps> = ({ isOpen, onClose, 
     try {
       setIsLoading(true);
       setError(null);
-      // TODO: Implement API call to verify code
-      // await verifyCode(email, code);
-      onVerified();
-      onClose();
+      const result = await userService.verify(email, code);
+      if (result.success) {
+        // Store user email in localStorage for later use
+        localStorage.setItem('userEmail', email);
+        onVerified();
+        onClose();
+      } else {
+        setError(result.error || 'Invalid verification code. Please try again.');
+      }
     } catch (err) {
       setError('Invalid verification code. Please try again.');
     } finally {
@@ -60,8 +70,10 @@ const VerificationModal: React.FC<VerificationModalProps> = ({ isOpen, onClose, 
     try {
       setIsLoading(true);
       setError(null);
-      // TODO: Implement API call to resend code
-      // await resendVerificationCode(email);
+      const result = await userService.sendCode(email);
+      if (!result.success) {
+        setError(result.error || 'Failed to resend code. Please try again.');
+      }
     } catch (err) {
       setError('Failed to resend code. Please try again.');
     } finally {

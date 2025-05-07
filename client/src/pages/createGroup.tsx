@@ -2,10 +2,14 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Users, ArrowLeft } from 'lucide-react';
+import { MapPin, Clock, ArrowLeft } from 'lucide-react';
+import OrderService from '../services/orderService';
 
 export default function CreateGroup() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const orderService = new OrderService();
   const [formData, setFormData] = useState({
     restaurant: '',
     location: '',
@@ -15,18 +19,44 @@ export default function CreateGroup() {
   });
 
   const locations = [
-    "University Library",
-    "Student Center",
-    "Engineering Building",
-    "Science Hall",
-    "Dorm Commons"
+    "Regenstein Library",
+    "Harper Library",
+    "John Crerar Library"
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement group creation logic
-    console.log('Creating group:', formData);
-    navigate('/viewGroups');
+
+    const email = localStorage.getItem('userEmail');
+    if (!email) {
+      setError('You must be logged in to create a group. Please verify your email first.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Convert the date to ISO format for the API
+      const expirationDate = new Date(formData.orderTime).toISOString();
+
+      const result = await orderService.createOrder(
+        email,
+        formData.restaurant,
+        expirationDate,
+        formData.location
+      );
+
+      if (result.success) {
+        navigate('/viewGroups');
+      } else {
+        setError(result.error || 'Failed to create group. Please try again.');
+      }
+    } catch (err) {
+      setError('An error occurred while creating the group. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -37,6 +67,7 @@ export default function CreateGroup() {
             <button
               onClick={() => navigate(-1)}
               className="mr-3 text-gray-500 hover:text-gray-700"
+              disabled={isLoading}
             >
               <ArrowLeft size={20} />
             </button>
@@ -48,6 +79,7 @@ export default function CreateGroup() {
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               className="py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              disabled={isLoading}
             >
               {locations.map(location => (
                 <option key={location} value={location}>{location}</option>
@@ -59,6 +91,12 @@ export default function CreateGroup() {
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-8">Create New Group</h1>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow">
           {/* Restaurant Name */}
@@ -73,6 +111,7 @@ export default function CreateGroup() {
               onChange={(e) => setFormData({ ...formData, restaurant: e.target.value })}
               className="py-1.5 px-3 mt-1 block w-full rounded-md border border-gray-300 focus:border-orange-500 focus:ring-orange-500"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -89,6 +128,7 @@ export default function CreateGroup() {
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-orange-500 focus:border-orange-500"
                 required
+                disabled={isLoading}
               >
                 <option value="">Select a location</option>
                 {locations.map(location => (
@@ -112,6 +152,7 @@ export default function CreateGroup() {
                 onChange={(e) => setFormData({ ...formData, orderTime: e.target.value })}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-orange-500 focus:border-orange-500"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -122,14 +163,16 @@ export default function CreateGroup() {
               type="button"
               onClick={() => navigate(-1)}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-white ${isLoading ? 'bg-orange-400' : 'bg-orange-600 hover:bg-orange-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500`}
+              disabled={isLoading}
             >
-              Create Group
+              {isLoading ? 'Creating...' : 'Create Group'}
             </button>
           </div>
         </form>

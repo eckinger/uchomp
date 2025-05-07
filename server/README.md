@@ -54,62 +54,98 @@ Expected Output:
 { "success": true, "code": "XXXXXX" }
 
 Verify Code:
-Invoke-RestMethod -Uri "http://localhost:5151/verify" `  -Method POST`
--Body '{"email": "test@example.com", "key": "XXXXXX"}' `
--ContentType "application/json"
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/verify" `
+  -Method POST `
+  -Body '{"email": "test@example.com", "key": "XXXXXX"}' `
+  -ContentType "application/json"
+```
 
 Expected Output:
 { "success": true }
 
 Update User Profile:
-Invoke-RestMethod -Uri "http://localhost:5151/update-profile" `  -Method POST`
--Body '{"email": "test@example.com", "name": "Test User", "cell": "123-456-7890"}' `
--ContentType "application/json"
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/update-profile" `
+  -Method POST `
+  -Body '{"email": "test@example.com", "name": "Test User", "cell": "123-456-7890"}' `
+  -ContentType "application/json"
+```
 
 Expected Output:
 { "success": true }
 
 Create Order:
-Invoke-RestMethod -Uri "http://localhost:5151/create-order" `  -Method POST`
--Body '{
-"owner_id": "user-id-from-db",
-"restaurant": "Pizza Palace",
-"expiration": "2025-05-06T23:59:00Z",
-"loc": "Regenstein Library"
-}' `
--ContentType "application/json"
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/create-order" `
+  -Method POST `
+  -Body '{
+    "owner_id": "user-id-from-db",
+    "restaurant": "Pizza Palace",
+    "expiration": "2025-05-06T23:59:00Z",
+    "loc": "Regenstein Library"
+  }' `
+  -ContentType "application/json"
+```
 
 Expected Output:
 { "success": true, "order_id": <order_id> }
 
 Delete Order:
+
+```powershell
 Invoke-RestMethod -Uri "http://localhost:5151/delete-order/<order_id>" `
--Method DELETE
+  -Method DELETE
+```
 
 Expected Output:
 { "success": true }
 
+Get Orders:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/orders" `
+  -Method GET
+```
+
+Expected Output:
+[
+  {
+    "id": 1,
+    "owner_id": "user-id-from-db",
+    "restaurant": "Pizza Palace",
+    "expiration": "2025-05-06T23:59:00Z",
+    "loc": "Regenstein Library",
+    "participant_count": 3,
+    "participants": ["user-id-1", "user-id-2", "user-id-3"]
+  },
+  ...
+]
+
 The implementation includes two core service modules: `userService.ts` and `orderService.ts`.
 
 In `userService.ts`, the following functionality was implemented:
-
-- `send_code(email)`: Generates a 6-digit numeric code, stores it in the `codes` table using an upsert (insert or update) strategy, and ensures the email exists in the `user` table. If not, it creates a new user entry with just the email.
+- `send_code(email)`: Generates a 6-digit numeric code, stores it in the `code` table using an upsert (insert or update) strategy, and ensures the email exists in the `user` table. If not, it creates a new user entry with just the email.
 - `verify(email, code)`: Checks if the code exists and matches the given email. It ensures the code is not older than 10 minutes. If valid, it deletes the code from the database and confirms the user.
 - `get_name_and_cell(email, name, cell)`: Updates the user’s record with a full name and a phone number. Phone numbers are validated to match the format `XXX-XXX-XXXX`. If the user does not exist, it throws an error.
 - `save_user(name, cell, email)`: A utility function (not used in the live routes) that inserts or updates a user’s full profile in the database.
 
 In `orderService.ts`, the following logic was implemented:
-
-- `create_order(owner_id, restaurant, expiration, loc)`: Accepts a user ID (must exist in the `user` table), restaurant name (must be provided), expiration time (must be in the future), and a location (must be one of the predefined `locs` enum values). If validation passes, the order is inserted into the `food_order` table.
-- `delete_order(order_id)`: Deletes the order with the specified ID from the `food_order` table.
+- `createOrder(owner_id, restaurant, expiration, loc)`: Accepts a user ID (must exist in the `user` table), restaurant name (must be provided), expiration time (must be in the future), and a location (must be one of the predefined `locs` enum values). If validation passes, the order is inserted into the `food_order` table.
+- `deleteOrder(order_id)`: Deletes the order with the specified ID from the `food_order` table.
+- `getOrders()`: Retrieves all active food orders (where expiration is in the future) along with the count and list of participants for each order. Orders are sorted by expiration date in ascending order.
 
 The backend server was refactored from a single JavaScript file (`server.js`) to a modular and strictly typed TypeScript setup (`server.ts`). The original `server.js` only included a GET route to fetch users and lacked structured validation or business logic. The new `server.ts` introduces:
-
 - POST `/send-code`: Triggers a verification code to the specified email.
 - POST `/verify`: Verifies the submitted code for a given email.
 - POST `/update-profile`: Updates a user’s full name and cell number.
 - POST `/create-order`: Adds a new food order to the system.
 - DELETE `/delete-order/:id`: Removes a specific food order by ID.
+- GET `/api/users`: Lists all users in the system.
+- GET `/orders`: Retrieves all active food orders with participant information.
 - GET `/api/users`: Lists all users in the system.
 
 Additionally, the PostgreSQL schema was modernized. In the old schema, the order model involved an ambiguous relation between `order_group`, `food_order`, and `user`, and lacked structured phone/email fields. The new schema now includes:

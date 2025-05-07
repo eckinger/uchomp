@@ -49,3 +49,30 @@ export async function deleteOrder(
     return { success: false, error: (err as Error).message };
   }
 }
+
+// Get all active food orders
+export async function getOrders(): Promise<{
+  success: boolean;
+  orders?: any[];
+  error?: string;
+}> {
+  try {
+    // Get all active orders (where expiration is in the future)
+    const result = await pool.query(
+      `SELECT fo.id, fo.owner_id, fo.restaurant, fo.expiration, fo.loc, 
+       (SELECT COUNT(og.user_id) FROM order_group og WHERE og.food_order_id = fo.id) as participant_count,
+       (SELECT ARRAY_AGG(og.user_id) FROM order_group og WHERE og.food_order_id = fo.id) as participants
+       FROM food_order fo
+       WHERE fo.expiration > NOW()
+       ORDER BY fo.expiration ASC`
+    );
+
+    return {
+      success: true,
+      orders: result.rows,
+    };
+  } catch (err) {
+    console.error("Error fetching orders:", err);
+    return { success: false, error: (err as Error).message };
+  }
+}

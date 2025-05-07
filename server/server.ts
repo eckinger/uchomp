@@ -51,7 +51,7 @@ app.post("/send-code", async (req: Request, res: Response) => {
 });
 
 // API: Verify Code
-app.post("/verify", async (req, res) => {
+app.post("/verify", async (req: Request, res: Response) => {
   const { email, key } = req.body;
   try {
     const result = await userService.verify(email, key);
@@ -101,6 +101,17 @@ app.delete("/delete-order/:id", async (req: Request, res: Response) => {
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     console.error("Error in /delete-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// API: Get Orders
+app.get("/orders", async (req: Request, res: Response) => {
+  try {
+    const result = await orderService.get_orders();
+    res.status(result.success ? 200 : 400).json(result.orders || []);
+  } catch (err) {
+    console.error("Error in /orders:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
 });
