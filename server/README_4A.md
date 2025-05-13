@@ -8,11 +8,11 @@ In this second iteration of UChomps, we aim to enhance group-related functionali
 - **Join group (frontend-linked)** – *Alex*
 - **Create a group (frontend-linked)** – *Alex*
 - **Email functionality (Resend integration)** – *Sam*
-- **Group expiration triggers email notifications** – *Mai*
-- **Notifications for joining/leaving a group** – *Mai*
-- **Filtering functionality** – *Mai / Sam*
-- **Member view for group with participation counts** – *Sam*
-- **Group ownership transfer if leader leaves** – *Sam*
+- **Group expiration triggers email notifications** – *Sam*
+- **Notifications for joining/leaving a group** – *Sam*
+- **Filtering functionality** – *Mai*
+- **Member view for group with participation counts** – *Mai*
+- **Group ownership transfer if leader leaves** – *Mai*
 
 ## Division of Labor
 
@@ -21,11 +21,11 @@ In this second iteration of UChomps, we aim to enhance group-related functionali
 | Join group (frontend-linked)                     | Alex        |
 | Create a group (frontend-linked)                 | Alex        |
 | Email delivery via Resend                        | Sam         |
-| Group expiration notifications                   | Mai         |
-| Join/leave email notifications                   | Mai         |
-| Filtering                                        | Mai / Sam   |
-| Group member viewer and participation count view | Sam         |
-| Group leader ownership transfer logic            | Sam         |
+| Group expiration notifications                   | Sam         |
+| Join/leave email notifications                   | Sam         |
+| Filtering                                        | Mai         |
+| Group member viewer and participation count view | Mai         |
+| Group leader ownership transfer logic            | Mai         |
 
 ## Main Code Directory Structure:
 
@@ -40,6 +40,7 @@ In this second iteration of UChomps, we aim to enhance group-related functionali
         - VerificationModal.tsx
       - services/
         - apiClient.ts
+        - notificationService.ts
         - orderService.ts
         - userService.ts
       - App.tsx
@@ -48,6 +49,7 @@ In this second iteration of UChomps, we aim to enhance group-related functionali
     - __tests__/
       - userService.test.ts
       - orderService.test.ts
+      - notificationService.test.ts
     - controllers/
       - userController.ts
       - orderController.ts
