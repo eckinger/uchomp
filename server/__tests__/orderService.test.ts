@@ -468,4 +468,212 @@ describe("Order Service Tests", () => {
       expect(orderRecord.rows[0].size).toBe(maxSize);
     });
   });
+
+  // Tests for getOrders function with location filtering
+  describe("getOrders", () => {
+    let testOrderIds: string[];
+
+    // Setup: Create test orders in different locations
+    beforeEach(async () => {
+      testOrderIds = [];
+      const locations = [
+        "Regenstein Library",
+        "Harper Library",
+        "John Crerar Library"
+      ];
+      const restaurant = "Test Restaurant";
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+
+      // Create an order in each location
+      for (const location of locations) {
+        const result = await orderService.createOrder(
+          testUserId,
+          restaurant,
+          expiration,
+          location
+        );
+        if (result.orderId === undefined) {
+          throw new Error("Order ID is undefined");
+        }
+        testOrderIds.push(result.orderId);
+      }
+    });
+
+    test("should return all active orders when no location filter is provided", async () => {
+      const result = await orderService.getOrders();
+      expect(result.success).toBe(true);
+      expect(result.orders).toBeDefined();
+      expect(result.orders.length).toBeGreaterThanOrEqual(3); // At least our test orders
+    });
+
+    test("should filter orders by specific location", async () => {
+      const location = "Regenstein Library";
+      const result = await orderService.getOrders(location);
+      expect(result.success).toBe(true);
+      expect(result.orders).toBeDefined();
+
+      // Verify all returned orders are from the specified location
+      result.orders.forEach(order => {
+        expect(order.location).toBe(location);
+      });
+    });
+
+    test("should return empty array for non-existent location", async () => {
+      const invalidLocation = "Student Center";
+      const result = await orderService.getOrders(invalidLocation);
+      expect(result.success).toBe(true);
+      expect(result.orders).toBeDefined();
+      expect(result.orders.length).toBe(0);
+    });
+
+    test("should handle case-insensitive location matching", async () => {
+      const location = "regenstein library";
+      const result = await orderService.getOrders(location);
+      expect(result.success).toBe(true);
+      expect(result.orders).toBeDefined();
+
+      // Verify all returned orders are from Regenstein Library
+      result.orders.forEach(order => {
+        expect(order.location.toLowerCase()).toBe(location.toLowerCase());
+      });
+    });
+
+    test("should only return active (non-expired) orders", async () => {
+      // Create an expired order
+      const expiredRestaurant = "Expired Restaurant";
+      const pastExpiration = new Date();
+      pastExpiration.setHours(pastExpiration.getHours() - 1);
+      const location = "Regenstein Library";
+
+      await orderService.createOrder(
+        testUserId,
+        expiredRestaurant,
+        pastExpiration,
+        location
+      );
+
+      const result = await orderService.getOrders(location);
+      expect(result.success).toBe(true);
+      expect(result.orders).toBeDefined();
+
+      // Verify no expired orders are returned
+      result.orders.forEach(order => {
+        expect(new Date(order.expiration) > new Date()).toBe(true);
+      });
+    });
+  });
+
+  // Tests for leaveGroup function with ownership transfer
+  describe("leaveGroup", () => {
+    let testOrderId: string;
+    let secondUserId: string;
+    let thirdUserId: string;
+
+    // Setup: Create a test order and additional test users
+    beforeEach(async () => {
+      // Create an order first
+      const restaurant = "Leave Test Restaurant";
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+      const meetupLocation = "Regenstein Library";
+
+      const result = await orderService.createOrder(
+        testUserId,
+        restaurant,
+        expiration,
+        meetupLocation,
+      );
+      if (result.orderId === undefined) {
+        throw new Error("Order ID is undefined");
+      }
+      testOrderId = result.orderId.toString();
+
+      // Create additional test users
+      secondUserId = await createTestUser();
+      thirdUserId = await createTestUser();
+
+      // Add users to the group in sequence
+      await orderService.joinGroup(secondUserId, testOrderId);
+      await orderService.joinGroup(thirdUserId, testOrderId);
+    });
+
+    test("should transfer ownership to next member when owner leaves", async () => {
+      // Owner leaves the group
+      const result = await orderService.leaveGroup(testUserId, testOrderId);
+      expect(result.success).toBe(true);
+
+      // Verify ownership was transferred to the first member who joined
+      const orderRecord = await db.query(
+        "SELECT owner_id FROM food_orders WHERE id = $1",
+        [testOrderId],
+      );
+      expect(orderRecord.rows[0].owner_id).toBe(secondUserId);
+    });
+
+    test("should delete group when last member leaves", async () => {
+      // First, owner leaves
+      await orderService.leaveGroup(testUserId, testOrderId);
+
+      // Then second user leaves
+      await orderService.leaveGroup(secondUserId, testOrderId);
+
+      // Finally, last user leaves
+      const result = await orderService.leaveGroup(thirdUserId, testOrderId);
+      expect(result.success).toBe(true);
+
+      // Verify group was deleted
+      const orderRecord = await db.query(
+        "SELECT * FROM food_orders WHERE id = $1",
+        [testOrderId],
+      );
+      expect(orderRecord.rows.length).toBe(0);
+    });
+
+    test("should not allow non-members to leave group", async () => {
+      const nonMemberId = await createTestUser();
+      const result = await orderService.leaveGroup(nonMemberId, testOrderId);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("not a member");
+    });
+
+    test("should maintain group when non-owner member leaves", async () => {
+      // Non-owner member leaves
+      const result = await orderService.leaveGroup(secondUserId, testOrderId);
+      expect(result.success).toBe(true);
+
+      // Verify group still exists and ownership unchanged
+      const orderRecord = await db.query(
+        "SELECT owner_id FROM food_orders WHERE id = $1",
+        [testOrderId],
+      );
+      expect(orderRecord.rows[0].owner_id).toBe(testUserId);
+    });
+
+    test("should handle ownership transfer with multiple members", async () => {
+      // Create a fourth user and add them to the group
+      const fourthUserId = await createTestUser();
+      await orderService.joinGroup(fourthUserId, testOrderId);
+
+      // Owner leaves
+      await orderService.leaveGroup(testUserId, testOrderId);
+
+      // Verify ownership transferred to second user (first to join)
+      const orderRecord = await db.query(
+        "SELECT owner_id FROM food_orders WHERE id = $1",
+        [testOrderId],
+      );
+      expect(orderRecord.rows[0].owner_id).toBe(secondUserId);
+
+      // Second user (now owner) leaves
+      await orderService.leaveGroup(secondUserId, testOrderId);
+
+      // Verify ownership transferred to third user
+      const updatedOrderRecord = await db.query(
+        "SELECT owner_id FROM food_orders WHERE id = $1",
+        [testOrderId],
+      );
+      expect(updatedOrderRecord.rows[0].owner_id).toBe(thirdUserId);
+    });
+  });
 });
