@@ -8,7 +8,7 @@ async function createTestUser(): Promise<string> {
   const id = randomUUID();
   await db.query(
     "INSERT INTO users (id, email, name, cell) VALUES ($1, $2, $3, $4)",
-    [id, `user_${id}@example.com`, "Test User", "555-555-5555"]
+    [id, `user_${id}@example.com`, "Test User", "555-555-5555"],
   );
   return id;
 }
@@ -43,7 +43,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
@@ -67,13 +67,13 @@ describe("Order Service Tests", () => {
           testUserId,
           restaurant,
           expiration,
-          meetupLocation
+          meetupLocation,
         );
         expect(result.success).toBe(true);
 
         const orderRecord = await db.query(
           "SELECT location FROM food_orders WHERE id = $1",
-          [result.orderId]
+          [result.orderId],
         );
         expect(orderRecord.rows[0].location).toBe(meetupLocation);
       }
@@ -89,7 +89,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        invalidLocation
+        invalidLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Invalid Location");
@@ -104,7 +104,7 @@ describe("Order Service Tests", () => {
         testUserId,
         "",
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Restaurant name is required.");
@@ -120,7 +120,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         pastExpiration,
-        meetupLocation
+        meetupLocation,
       );
 
       expect(result.success).toBe(false);
@@ -139,7 +139,7 @@ describe("Order Service Tests", () => {
         fakeUUID,
         restaurant,
         new Date(Date.now() + 10000),
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("User not found");
@@ -164,13 +164,13 @@ describe("Order Service Tests", () => {
           testUserId,
           longName,
           expiration,
-          meetupLocation
+          meetupLocation,
         );
         expect(result.success).toBe(true);
 
         const orderRecord = await db.query(
           "SELECT restaurant FROM food_orders WHERE id = $1",
-          [result.orderId]
+          [result.orderId],
         );
         expect(orderRecord.rows[0].restaurant).toBe(longName);
       } catch (error) {
@@ -199,7 +199,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       if (result.orderId === undefined) {
         throw new Error("Order ID is undefined");
@@ -214,7 +214,7 @@ describe("Order Service Tests", () => {
       // Verify order was removed from food_orders table
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(orderRecord.rows.length).toBe(0);
     });
@@ -241,7 +241,7 @@ describe("Order Service Tests", () => {
       // Verify related order_groups was also removed
       const foodOrderRecords = await db.query(
         "SELECT * FROM order_groups WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(foodOrderRecords.rows.length).toBe(0);
     });
@@ -256,7 +256,7 @@ describe("Order Service Tests", () => {
 
       const codeRecord = await db.query(
         "SELECT key FROM codes WHERE email = $1",
-        [email]
+        [email],
       );
       const code = codeRecord.rows[0].key;
 
@@ -266,7 +266,7 @@ describe("Order Service Tests", () => {
       // Get user ID
       const userRecord = await db.query(
         "SELECT id FROM users WHERE email = $1",
-        [email]
+        [email],
       );
       const userId = userRecord.rows[0].id;
 
@@ -280,7 +280,7 @@ describe("Order Service Tests", () => {
         userId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
@@ -288,11 +288,184 @@ describe("Order Service Tests", () => {
       // Verify order details
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [result.orderId]
+        [result.orderId],
       );
       expect(orderRecord.rows[0].owner_id).toBe(userId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
       expect(orderRecord.rows[0].location).toBe(meetupLocation);
+    });
+  });
+
+  // Tests for joinGroup function
+  describe("joinGroup", () => {
+    let testOrderId: string;
+    let secondUserId: string;
+
+    // Setup: Create a test order and a second test user
+    beforeEach(async () => {
+      // Create an order first
+      const restaurant = "Join Test Restaurant";
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+      const meetupLocation = "Regenstein Library";
+
+      const result = await orderService.createOrder(
+        testUserId,
+        restaurant,
+        expiration,
+        meetupLocation,
+      );
+      if (result.orderId === undefined) {
+        throw new Error("Order ID is undefined");
+      }
+      testOrderId = result.orderId.toString();
+
+      // Create a second test user
+      secondUserId = await createTestUser();
+    });
+
+    test("should allow a user to join a group", async () => {
+      const result = await orderService.joinGroup(secondUserId, testOrderId);
+      expect(result.success).toBe(true);
+
+      // Verify user was added to the order_groups table
+      const groupRecord = await db.query(
+        "SELECT * FROM order_groups WHERE user_id = $1 AND food_order_id = $2",
+        [secondUserId, testOrderId],
+      );
+      expect(groupRecord.rows.length).toBe(1);
+    });
+
+    test("should not allow the owner to join their own group", async () => {
+      const result = await orderService.joinGroup(testUserId, testOrderId);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("cannot join your own group");
+    });
+
+    test("should not allow joining a nonexistent group", async () => {
+      const fakeOrderId = "123e4567-e89b-12d3-a456-426614174000";
+      const result = await orderService.joinGroup(secondUserId, fakeOrderId);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Order not found");
+    });
+
+    test("should not allow joining an expired group", async () => {
+      // Create an expired order
+      const restaurant = "Expired Restaurant";
+      const pastExpiration = new Date();
+      pastExpiration.setHours(pastExpiration.getHours() - 1); // 1 hour in the past
+      const meetupLocation = "Harper Library";
+
+      // Manually insert an expired order
+      const { rows } = await db.query(
+        "INSERT INTO food_orders (owner_id, restaurant, expiration, location) VALUES ($1, $2, $3, $4) RETURNING id",
+        [testUserId, restaurant, pastExpiration, meetupLocation],
+      );
+      const expiredOrderId = rows[0].id;
+
+      const result = await orderService.joinGroup(secondUserId, expiredOrderId);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("expired");
+    });
+
+    test("should not allow a user to join a group twice", async () => {
+      // Join once
+      await orderService.joinGroup(secondUserId, testOrderId);
+
+      // Try to join again
+      const result = await orderService.joinGroup(secondUserId, testOrderId);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("already a member");
+    });
+  });
+
+  // Tests for createGroup function
+  describe("createGroup", () => {
+    test("should create a new group with valid inputs and make owner join automatically", async () => {
+      const restaurant = "New Group Restaurant";
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 2); // Expires in 2 hours
+      const meetupLocation = "John Crerar Library";
+
+      const result = await orderService.createGroup(
+        testUserId,
+        restaurant,
+        expiration,
+        meetupLocation,
+      );
+      expect(result.success).toBe(true);
+      expect(result.groupId).toBeDefined();
+
+      // Verify order was created
+      const orderRecord = await db.query(
+        "SELECT * FROM food_orders WHERE id = $1",
+        [result.groupId],
+      );
+      expect(orderRecord.rows.length).toBe(1);
+      expect(orderRecord.rows[0].owner_id).toBe(testUserId);
+
+      // Verify owner was automatically added to group
+      const memberRecord = await db.query(
+        "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
+        [result.groupId, testUserId],
+      );
+      expect(memberRecord.rows.length).toBe(1);
+    });
+
+    test("should reject creating a group with invalid location", async () => {
+      const restaurant = "Invalid Location Restaurant";
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+      const invalidLocation = "Student Center"; // Not a valid location
+
+      const result = await orderService.createGroup(
+        testUserId,
+        restaurant,
+        expiration,
+        invalidLocation,
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid Location");
+    });
+
+    test("should reject creating a group with past expiration", async () => {
+      const restaurant = "Past Expiration Restaurant";
+      const pastExpiration = new Date();
+      pastExpiration.setHours(pastExpiration.getHours() - 2); // 2 hours in the past
+      const meetupLocation = "Regenstein Library";
+
+      const result = await orderService.createGroup(
+        testUserId,
+        restaurant,
+        pastExpiration,
+        meetupLocation,
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("future");
+    });
+
+    test("should set maximum group size if provided", async () => {
+      const restaurant = "Limited Size Restaurant";
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 1);
+      const meetupLocation = "Harper Library";
+      const maxSize = 5; // Limit to 5 members
+
+      const result = await orderService.createGroup(
+        testUserId,
+        restaurant,
+        expiration,
+        meetupLocation,
+        maxSize,
+      );
+      expect(result.success).toBe(true);
+
+      // Verify size was set correctly
+      const orderRecord = await db.query(
+        "SELECT size FROM food_orders WHERE id = $1",
+        [result.groupId],
+      );
+      expect(orderRecord.rows[0].size).toBe(maxSize);
     });
   });
 });
