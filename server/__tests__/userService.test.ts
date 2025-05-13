@@ -162,6 +162,67 @@ describe("User Service Tests", () => {
     });
   });
 
+  test("should send a join notification email", async () => {
+    const emailService = require('resend'); // or wherever your wrapper is
+    const resendInstance = new emailService.Resend();
+    const sendMock = resendInstance.emails.send;
+
+    const userEmail = "user@example.com";
+    const groupName = "Pizza Lovers";
+
+    const result = await notificationService.sendJoinNotification(userEmail, groupName);
+
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: userEmail,
+        subject: expect.stringContaining("joined"),
+        html: expect.stringContaining(groupName),
+      })
+    );
+  });
+
+  test("should send expiration notification email", async () => {
+    const emailService = require('resend');
+    const resendInstance = new emailService.Resend();
+    const sendMock = resendInstance.emails.send;
+
+    const userEmail = "user@example.com";
+    const groupName = "Sushi Squad";
+    const expirationTime = new Date(Date.now() + 3600000); // 1 hour
+
+    const result = await notificationService.sendExpirationNotification(userEmail, groupName, expirationTime);
+
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: userEmail,
+        subject: expect.stringContaining("expiring"),
+        html: expect.stringContaining(groupName),
+      })
+    );
+  });
+
+  test("should send a leave notification email", async () => {
+    const emailService = require('resend');
+    const resendInstance = new emailService.Resend();
+    const sendMock = resendInstance.emails.send;
+
+    const userEmail = "user@example.com";
+    const groupName = "Taco Tuesday";
+
+    const result = await notificationService.sendLeaveNotification(userEmail, groupName);
+
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: userEmail,
+        subject: expect.stringContaining("left"),
+        html: expect.stringContaining(groupName),
+      })
+    );
+  });
+
   // Integration tests between methods
   describe("Integration Tests", () => {
     test("full user registration flow: send code, verify, update profile", async () => {
