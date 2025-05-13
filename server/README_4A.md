@@ -40,6 +40,7 @@ In this second iteration of UChomps, we aim to enhance group-related functionali
         - VerificationModal.tsx
       - services/
         - apiClient.ts
+        - notificationService.ts
         - orderService.ts
         - userService.ts
       - App.tsx
@@ -48,6 +49,7 @@ In this second iteration of UChomps, we aim to enhance group-related functionali
     - __tests__/
       - userService.test.ts
       - orderService.test.ts
+      - notificationService.test.ts
     - controllers/
       - userController.ts
       - orderController.ts
