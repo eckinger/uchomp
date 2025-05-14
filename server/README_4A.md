@@ -4,7 +4,7 @@
 
 In this second iteration of UChomps, we aim to enhance group-related functionality and integrate actual email communication. These features build upon the foundations laid in our original design document by enabling group coordination and notifications.
 
-### Features to Implement
+### Features to Implement/Unit Case Implementations
 - **Join group (frontend-linked)** – *Alex*
 - **Create a group (frontend-linked)** – *Alex*
 - **Email functionality (Resend integration)** – *Sam*

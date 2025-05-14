@@ -46,9 +46,12 @@ To send a verification code to a user, use a POST request to `/send-code` with a
 Here's an example of the commands to use in powershell:
 
 Sending Verication Code:
-Invoke-RestMethod -Uri "http://localhost:5151/send-code" `  -Method POST`
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/api/users/send-code" `
+-Method POST `
 -Body '{"email": "test@example.com"}' `
 -ContentType "application/json"
+```
 
 Expected Output:
 { "success": true, "code": "XXXXXX" }
@@ -56,7 +59,7 @@ Expected Output:
 Verify Code:
 
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:5151/verify" `
+Invoke-RestMethod -Uri "http://localhost:5151/api/users/verify" `
   -Method POST `
   -Body '{"email": "test@example.com", "key": "XXXXXX"}' `
   -ContentType "application/json"
@@ -68,7 +71,7 @@ Expected Output:
 Update User Profile:
 
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:5151/update-profile" `
+Invoke-RestMethod -Uri "http://localhost:5151/api/users/update" `
   -Method POST `
   -Body '{"email": "test@example.com", "name": "Test User", "cell": "123-456-7890"}' `
   -ContentType "application/json"
@@ -80,7 +83,7 @@ Expected Output:
 Create Order:
 
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:5151/create-order" `
+Invoke-RestMethod -Uri "http://localhost:5151/api/orders/create" `
   -Method POST `
   -Body '{
     "owner_id": "user-id-from-db",
@@ -97,7 +100,7 @@ Expected Output:
 Delete Order:
 
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:5151/delete-order/<order_id>" `
+Invoke-RestMethod -Uri "http://localhost:5151/api/orders/delete/<order_id>" `
   -Method DELETE
 ```
 
