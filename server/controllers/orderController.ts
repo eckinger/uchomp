@@ -19,7 +19,7 @@ export const createOrder: RequestHandler = async (req, res) => {
       owner_id,
       restaurant,
       expiration,
-      loc
+      loc,
     );
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
@@ -36,6 +36,18 @@ export const deleteOrder: RequestHandler = async (req, res) => {
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     console.error("Error in /delete-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const joinOrder: RequestHandler = async (req, res) => {
+  const { userId, orderId } = req.body;
+
+  try {
+    const result = await orderService.joinOrder(userId, orderId);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (e) {
+    console.error("Error in /join-order:", e);
     res.status(500).json({ success: false, error: "Server error" });
   }
 };

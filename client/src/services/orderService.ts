@@ -5,7 +5,7 @@ export default class OrderService {
     ownerId: string,
     restaurant: string,
     expiration: string,
-    loc: string
+    loc: string,
   ) {
     try {
       const response = await apiClient.post("/orders/create-order", {
@@ -24,7 +24,7 @@ export default class OrderService {
   async deleteOrder(orderId: number) {
     try {
       const response = await apiClient.delete(
-        `/orders/delete-order/${orderId}`
+        `/orders/delete-order/${orderId}`,
       );
       return response.data;
     } catch (error) {
@@ -41,6 +41,19 @@ export default class OrderService {
     } catch (error) {
       console.error("Error fetching orders:", error);
       throw error;
+    }
+  }
+
+  async joinOrder(userId: string, orderId: number) {
+    try {
+      const response = await apiClient.post("/orders/join", {
+        userId,
+        orderId,
+      });
+      return response.data;
+    } catch (e) {
+      console.error("Error joining order:", e);
+      throw e;
     }
   }
 }
