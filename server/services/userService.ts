@@ -1,4 +1,5 @@
 import { pool } from "../db/db";
+import * as notificationService from "./notificationService";
 
 // code generator
 function generateCode(): number {
@@ -22,7 +23,14 @@ export async function sendCode(
     // Now insert or update the code
     await pool.query("CALL create_verification_code($1, $2)", [email, code]);
 
-    // TODO: Send email to user with the code
+    const subject = `Your UChomps Verification Code: ${code}`;
+    const html = `
+      <h2>Welcome to UChomps!</h2>
+      <p>Your verification code is: <strong>${code}</strong></p>
+      <p>Please enter this code to verify your email address.</p>
+    `;
+    
+    await notificationService.sendEmail(email, subject, html);
     return { success: true, code };
   } catch (err) {
     console.error("Error inserting code:", err);

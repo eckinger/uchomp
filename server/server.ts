@@ -3,6 +3,7 @@ import cors from "cors";
 import { Pool } from "pg";
 import userRoutes from "./routes/userRoutes";
 import orderRoutes from "./routes/orderRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 
 const app = express();
 
@@ -38,3 +39,5 @@ const PORT = 5151;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+// Add this with other route declarations
+app.use("/api/notifications", notificationRoutes);
