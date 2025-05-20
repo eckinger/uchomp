@@ -227,7 +227,7 @@ $$;
 -- Name: get_orders(public.locs); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION public.get_orders(p_location TEXT DEFAULT NULL)
+CREATE FUNCTION public.get_orders(p_location TEXT DEFAULT NULL)
 RETURNS TABLE(success BOOLEAN, location public.locs, orders JSON, error TEXT)
 LANGUAGE plpgsql
 AS $$
