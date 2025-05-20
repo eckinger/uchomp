@@ -359,15 +359,6 @@ ALTER TABLE ONLY public.food_orders
 ALTER TABLE ONLY public.order_groups
     ADD CONSTRAINT order_groups_food_order_id_fkey FOREIGN KEY (food_order_id) REFERENCES public.food_orders(id);
 
-
---
--- Name: order_groups order_groups_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.order_groups
-    ADD CONSTRAINT order_groups_id_fkey FOREIGN KEY (id) REFERENCES public.food_orders(id);
-
-
 --
 -- Name: order_groups order_groups_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
