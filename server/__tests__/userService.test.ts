@@ -1,5 +1,6 @@
 import * as userService from "../services/userService";
 import { pool as db } from "../db/db";
+import * as notificationService from "../services/notificationService";
 
 beforeEach(async () => {
   await db.query("BEGIN");
