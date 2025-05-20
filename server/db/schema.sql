@@ -227,14 +227,29 @@ $$;
 -- Name: get_orders(public.locs); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_orders(p_location public.locs DEFAULT NULL::public.locs) RETURNS TABLE(success boolean, location public.locs, orders json, error text)
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION public.get_orders(p_location TEXT DEFAULT NULL)
+RETURNS TABLE(success BOOLEAN, location public.locs, orders JSON, error TEXT)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_location public.locs;
 BEGIN
+  -- Validate location manually
+  IF p_location IS NOT NULL THEN
+    IF p_location NOT IN ('Regenstein Library', 'Harper Library', 'John Crerar Library') THEN
+      RETURN QUERY SELECT TRUE, NULL::public.locs, '[]'::JSON, NULL;
+      RETURN;
+    END IF;
+
+    v_location := p_location::public.locs;
+  ELSE
+    v_location := NULL;
+  END IF;
+
   RETURN QUERY
   SELECT 
     TRUE,
-    p_location,
+    v_location,
     (
       SELECT JSON_AGG(row_to_json(o))
       FROM (
@@ -252,16 +267,14 @@ BEGIN
           ) AS participants
         FROM food_orders fo
         WHERE fo.expiration > NOW()
-          AND (p_location IS NULL OR fo.location = p_location)
+          AND (v_location IS NULL OR fo.location = v_location)
         ORDER BY fo.expiration
       ) o
     ),
     NULL;
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN QUERY SELECT FALSE, p_location, '[]'::JSON, SQLERRM;
 END;
 $$;
+
 
 
 --
@@ -287,9 +300,9 @@ BEGIN
         RETURN;
     END IF;
 
-    -- User cannot join their own group
+    -- User cannot join their own order
     IF v_owner_id = p_user_id THEN
-        RETURN QUERY SELECT FALSE, 'You cannot join your own group';
+        RETURN QUERY SELECT FALSE, 'You cannot join your own order';
         RETURN;
     END IF;
 
