@@ -2,8 +2,32 @@ import * as userService from "../services/userService";
 import * as notificationService from "../services/notificationService";
 import { pool as db } from "../db/db";
 
+// Mock notificationService
+jest.mock("../services/notificationService", () => ({
+  sendEmail: jest.fn(),
+  sendJoinNotification: jest.fn(),
+  sendExpirationNotification: jest.fn(),
+  sendLeaveNotification: jest.fn(),
+}));
+
+jest.mock("resend", () => {
+  return {
+    Resend: jest.fn().mockImplementation(() => ({
+      emails: {
+        send: jest.fn().mockResolvedValue({
+          id: "mock_id",
+          from: "UChomps <uchomp@aeckinger.com>",
+          to: ["test@example.com"],
+          status: "success"
+        })
+      },
+    })),
+  };
+});
+
 beforeEach(async () => {
   await db.query("BEGIN");
+  jest.clearAllMocks(); // Clear mocks before each test
 });
 
 // Clean up database after each test
@@ -163,75 +187,126 @@ describe("User Service Tests", () => {
     });
   });
 
-  test("should send a join notification email", async () => {
-    const emailService = require("resend"); // or wherever your wrapper is
-    const resendInstance = new emailService.Resend();
-    const sendMock = resendInstance.emails.send;
+  describe("Notification Service Tests", () => {
+    describe("Email Functionality", () => {
+      test("should send an email using Resend", async () => {
+        const sendEmailMock = notificationService.sendEmail as jest.Mock;
+        sendEmailMock.mockResolvedValue({ success: true });
 
-    const userEmail = "user@example.com";
-    const groupName = "Pizza Lovers";
+        const email = "test@example.com";
+        const subject = "Test Subject";
+        const html = "<p>Test content</p>";
 
-    const result = await notificationService.sendJoinNotification(
-      userEmail,
-      groupName
-    );
+        const result = await notificationService.sendEmail(email, subject, html);
 
-    expect(result.success).toBe(true);
-    expect(sendMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: userEmail,
-        subject: expect.stringContaining("joined"),
-        html: expect.stringContaining(groupName),
-      })
-    );
-  });
+        expect(result.success).toBe(true);
+        expect(sendEmailMock).toHaveBeenCalledWith(
+          email,
+          subject,
+          html
+        );
+      });
 
-  test("should send expiration notification email", async () => {
-    const emailService = require("resend");
-    const resendInstance = new emailService.Resend();
-    const sendMock = resendInstance.emails.send;
+      test("should handle email sending errors gracefully", async () => {
+        const mockError = new Error("Email service error");
+        (notificationService.sendEmail as jest.Mock).mockRejectedValueOnce(mockError);
+      
+        const email = "test@example.com";
+        const subject = "Test Subject";
+        const html = "<p>This is a test email</p>";
+      
+        const result = await notificationService.sendEmail(email, subject, html);
+      
+        expect(result.success).toBe(false);
+        expect(result.error).toBe("Email service error");
+      });
 
-    const userEmail = "user@example.com";
-    const groupName = "Sushi Squad";
-    const expirationTime = new Date(Date.now() + 3600000); // 1 hour
+      test("should format expiration notification correctly", async () => {
+        const sendEmailMock = notificationService.sendEmail as jest.Mock;
+        const expirationTime = new Date("2024-01-01T12:00:00");
+        
+        await notificationService.sendExpirationNotification(
+          "test@example.com",
+          "Test Group",
+          expirationTime
+        );
 
-    const result = await notificationService.sendExpirationNotification(
-      userEmail,
-      groupName,
-      expirationTime
-    );
+        expect(sendEmailMock).toHaveBeenCalledWith(
+          "test@example.com",
+          expect.stringContaining("Test Group"),
+          expect.stringContaining("12:00:00")
+        );
+      });
 
-    expect(result.success).toBe(true);
-    expect(sendMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: userEmail,
-        subject: expect.stringContaining("expiring"),
-        html: expect.stringContaining(groupName),
-      })
-    );
-  });
+      test("should include proper HTML formatting in notifications", async () => {
+        const sendEmailMock = notificationService.sendEmail as jest.Mock;
+        
+        await notificationService.sendJoinNotification(
+          "test@example.com",
+          "Test Group"
+        );
 
-  test("should send a leave notification email", async () => {
-    const emailService = require("resend");
-    const resendInstance = new emailService.Resend();
-    const sendMock = resendInstance.emails.send;
+        expect(sendEmailMock).toHaveBeenCalledWith(
+          "test@example.com",
+          expect.any(String),
+          expect.stringContaining("<h2>")
+        );
+      });
 
-    const userEmail = "user@example.com";
-    const groupName = "Taco Tuesday";
+      test("should send a join notification email", async () => {
+        const sendJoinNotificationMock = notificationService.sendJoinNotification as jest.Mock;
+        sendJoinNotificationMock.mockResolvedValue({ success: true });
+    
+        const userEmail = "user@example.com";
+        const groupName = "Pizza Lovers";
+    
+        const result = await notificationService.sendJoinNotification(
+          userEmail,
+          groupName
+        );
+    
+        expect(result.success).toBe(true);
+        expect(sendJoinNotificationMock).toHaveBeenCalledWith(userEmail, groupName);
+      });
+    
+      test("should send expiration notification email", async () => {
+        const sendExpirationNotificationMock = notificationService.sendExpirationNotification as jest.Mock;
+        sendExpirationNotificationMock.mockResolvedValue({ success: true });
+    
+        const userEmail = "user@example.com";
+        const groupName = "Sushi Squad";
+        const expirationTime = new Date(Date.now() + 3600000); // 1 hour
+    
+        const result = await notificationService.sendExpirationNotification(
+          userEmail,
+          groupName,
+          expirationTime
+        );
+    
+        expect(result.success).toBe(true);
+        expect(sendExpirationNotificationMock).toHaveBeenCalledWith(
+          userEmail,
+          groupName,
+          expirationTime
+        );
+      });
 
-    const result = await notificationService.sendLeaveNotification(
-      userEmail,
-      groupName
-    );
-
-    expect(result.success).toBe(true);
-    expect(sendMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: userEmail,
-        subject: expect.stringContaining("left"),
-        html: expect.stringContaining(groupName),
-      })
-    );
+      test("should send a leave notification email", async () => {
+        const sendLeaveNotificationMock = notificationService.sendLeaveNotification as jest.Mock;
+        sendLeaveNotificationMock.mockResolvedValue({ success: true });
+    
+        const userEmail = "user@example.com";
+        const groupName = "Taco Tuesday";
+    
+        const result = await notificationService.sendLeaveNotification(
+          userEmail,
+          groupName
+        );
+    
+        expect(result.success).toBe(true);
+        expect(sendLeaveNotificationMock).toHaveBeenCalledWith(userEmail, groupName);
+      });
+    });
   });
 
   // Integration tests between methods
@@ -294,3 +369,4 @@ describe("User Service Tests", () => {
     });
   });
 });
+

@@ -1,20 +1,38 @@
-import { pool } from "../db/db";
 import { Resend } from 'resend';
+import dotenv from 'dotenv';
 
-const resend = new Resend('re_EAiWesYB_BUVrtCALbKrrpzZZkdp2wwNn');
+dotenv.config();
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendEmail(email: string, subject: string, html: string) {
   try {
-    await resend.emails.send({
-      from: 'hello@uchomp.dev',
-      to: email,
+    console.log("type:", JSON.stringify(resend))
+    const response = await resend.emails.send({
+      from: 'UChomps <uchomp@aeckinger.com>',
+      to: [email],
       subject,
-      html
+      html,
     });
-    return { success: true };
-  } catch(err) {
+
+    if (!response) {
+      return { 
+        success: false, 
+        error: "Failed to send email" 
+      };
+    }
+    return { 
+      success: true,
+      data: response 
+    };
+
+  } catch (err) {
+    console.log("3")
     console.error("Error sending email:", err);
-    return { success: false, error: (err as Error).message };
+    return { 
+      success: false, 
+      error: (err instanceof Error) ? err.message : "Unknown error occurred"
+    };
   }
 }
 
@@ -30,7 +48,7 @@ export async function sendExpirationNotification(
     <p>Your food order group for ${groupName} will expire at ${timeFormatted}.</p>
     <p>Please make sure to finalize your order before the expiration time.</p>
   `;
-  
+  console.log("Hello?")
   return sendEmail(userEmail, subject, html);
 }
 
@@ -44,7 +62,7 @@ export async function sendJoinNotification(
     <p>You have successfully joined the food order group for ${groupName}.</p>
     <p>You'll receive notifications about group updates and when the order is about to expire.</p>
   `;
-
+  console.log("Oh Hi!")
   return sendEmail(userEmail, subject, html);
 }
 
@@ -58,6 +76,6 @@ export async function sendLeaveNotification(
     <p>You have left the food order group for ${groupName}.</p>
     <p>Feel free to join other groups or create your own!</p>
   `;
-
+  console.log("Goodbye.")
   return sendEmail(userEmail, subject, html);
 }

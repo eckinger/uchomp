@@ -30,7 +30,11 @@ export async function sendCode(
       <p>Please enter this code to verify your email address.</p>
     `;
     
-    await notificationService.sendEmail(email, subject, html);
+    await notificationService.sendEmail(
+      email,
+      "Your verification code",
+      `<p>Your code is: ${code}</p>`
+    );
     return { success: true, code };
   } catch (err) {
     console.error("Error inserting code:", err);

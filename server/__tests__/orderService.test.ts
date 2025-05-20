@@ -1,5 +1,6 @@
 import * as orderService from "../services/orderService";
 import * as userService from "../services/userService";
+import * as notificationService from "../services/notificationService";
 import { pool as db } from "../db/db";
 import { randomUUID } from "crypto";
 import { LOCATION } from "../models/location";
@@ -15,9 +16,18 @@ async function createTestUser(): Promise<string> {
   return id;
 }
 
+// Mock notificationService
+// jest.mock("../services/notificationService", () => ({
+//   sendEmail: jest.fn(),
+//   sendJoinNotification: jest.fn(),
+//   sendExpirationNotification: jest.fn(),
+//   sendLeaveNotification: jest.fn(),
+// }));
+
 beforeEach(async () => {
   await db.query("BEGIN");
   testUserId = await createTestUser();
+  jest.clearAllMocks(); // Clear mocks before each test
 });
 
 afterEach(async () => {
@@ -676,5 +686,27 @@ describe("Order Service Tests", () => {
       );
       expect(updatedOrderRecord.rows[0].owner_id).toBe(thirdUserId);
     });
+  });
+
+  test("should send expiration notification email", async () => {
+    const sendExpirationNotificationMock = notificationService.sendExpirationNotification as jest.Mock;
+    sendExpirationNotificationMock.mockResolvedValue({ success: true });
+
+    const userEmail = "user@example.com";
+    const groupName = "Sushi Squad";
+    const expirationTime = new Date(Date.now() + 3600000); // 1 hour
+
+    const result = await notificationService.sendExpirationNotification(
+      userEmail,
+      groupName,
+      expirationTime
+    );
+
+    expect(result.success).toBe(true);
+    expect(sendExpirationNotificationMock).toHaveBeenCalledWith(
+      userEmail,
+      groupName,
+      expirationTime
+    );
   });
 });

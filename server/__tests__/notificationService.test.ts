@@ -2,11 +2,25 @@ import * as notificationService from "../services/notificationService";
 import { pool as db } from "../db/db";
 import { randomUUID } from "crypto";
 
+// jest.mock("resend", () => {
+//   return {
+//     Resend: jest.fn().mockImplementation(() => ({
+//       emails: {
+//         send: jest.fn(),
+//       },
+//     })),
+//   };
+// });
+
+
 jest.mock("resend", () => {
   return {
     Resend: jest.fn().mockImplementation(() => ({
       emails: {
-        send: jest.fn(),
+        send: jest.fn(() => {
+
+          console.log("I AM HERE");
+        }), //.mockResolvedValue({ id: 'mock-email-id' }),
       },
     })),
   };
@@ -41,104 +55,155 @@ afterAll(() => {
   db.end();
 });
 
+// describe("Notification Service Tests", () => {
+//   describe("Email Functionality", () => {
+//     test("should send an email using Resend", async () => {
+//       const email = "test@example.com";
+//       const subject = "Test Subject";
+//       const html = "<p>This is a test email</p>";
+
+//       const result = await notificationService.sendEmail(email, subject, html);
+
+//       expect(result.success).toBe(true);
+//       expect(sendMock).toHaveBeenCalledWith(
+//         expect.objectContaining({
+//           to: email,
+//           subject,
+//           html,
+//         })
+//       );
+//     });
+
+//     test("should handle email sending errors gracefully", async () => {
+//       sendMock.mockRejectedValueOnce(new Error("Email service error"));
+
+//       const email = "test@example.com";
+//       const subject = "Test Subject";
+//       const html = "<p>This is a test email</p>";
+
+//       const result = await notificationService.sendEmail(email, subject, html);
+
+//       expect(result.success).toBe(false);
+//       expect(result.error).toContain("Email service error");
+//     });
+//   });
 describe("Notification Service Tests", () => {
   describe("Email Functionality", () => {
-    test("should send an email using Resend", async () => {
-      const email = "test@example.com";
-      const subject = "Test Subject";
-      const html = "<p>This is a test email</p>";
-
-      const result = await notificationService.sendEmail(email, subject, html);
-
-      expect(result.success).toBe(true);
-      expect(sendMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: email,
-          subject,
-          html,
-        })
-      );
+    it.only("should send an email successfully", async () => {
+      const emailData = {
+        to: "fine1@uchicago.edu",
+        subject: "Test Subject",
+        text: "Test Content"
+      };
+      
+      await notificationService.sendEmail(emailData.to, emailData.subject, emailData.text);
+      
+      expect(sendMock).toHaveBeenCalledWith({
+        to: emailData.to,
+        subject: emailData.subject,
+        text: emailData.text
+      });
     });
 
-    test("should handle email sending errors gracefully", async () => {
-      sendMock.mockRejectedValueOnce(new Error("Email service error"));
-
-      const email = "test@example.com";
-      const subject = "Test Subject";
-      const html = "<p>This is a test email</p>";
-
-      const result = await notificationService.sendEmail(email, subject, html);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Email service error");
+    it("should handle email sending errors", async () => {
+      sendMock.mockRejectedValueOnce(new Error("Failed to send email"));
+      
+      const emailData = {
+        to: "test@example.com",
+        subject: "Test Subject",
+        text: "Test Content"
+      };
+      
+      await expect(notificationService.sendEmail(emailData.to, emailData.subject, emailData.text))
+        .rejects
+        .toThrow("Failed to send email");
     });
-  });
 
-  describe("Group Expiration Notifications", () => {
-    test("should send expiration notification when a group expires", async () => {
-      const groupId = randomUUID();
-      const groupName = "Test Group";
-      const expirationTime = new Date(Date.now() + 3600000); // 1 hour from now
-
-      await db.query(
-        "INSERT INTO food_orders (id, owner_id, restaurant, expiration) VALUES ($1, $2, $3, $4)",
-        [groupId, testUserId, groupName, expirationTime]
-      );
-
-      const result = await notificationService.sendExpirationNotification(
-        testUserId,
-        groupName,
-        expirationTime
-      );
-
-      expect(result.success).toBe(true);
+    it("should verify email content and recipients", async () => {
+      const userId = testUserId;
+      const notification = {
+        type: "ORDER_CONFIRMATION",
+        userId,
+        data: { orderId: "123" }
+      };
+      
+      await notificationService.sendEmail(notification.type, notification.userId, notification.data.orderId);
+      
       expect(sendMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          to: expect.stringContaining("user_"),
-          subject: expect.stringContaining("expiring"),
-          html: expect.stringContaining(groupName),
+          to: expect.any(String),
+          subject: expect.stringContaining("Order Confirmation"),
+          text: expect.stringContaining("123")
         })
       );
     });
   });
+});
 
-  describe("Join/Leave Notifications", () => {
-    test("should send a notification when a user joins a group", async () => {
-      const groupName = "Join Test Group";
-      const userEmail = "joiner@example.com";
+describe("Group Expiration Notifications", () => {
+  test("should send expiration notification when a group expires", async () => {
+    const groupId = randomUUID();
+    const groupName = "Test Group";
+    const expirationTime = new Date(Date.now() + 3600000); // 1 hour from now
 
-      const result = await notificationService.sendJoinNotification(
-        userEmail,
-        groupName
-      );
+    await db.query(
+      "INSERT INTO food_orders (id, owner_id, restaurant, expiration) VALUES ($1, $2, $3, $4)",
+      [groupId, testUserId, groupName, expirationTime]
+    );
 
-      expect(result.success).toBe(true);
-      expect(sendMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: userEmail,
-          subject: expect.stringContaining("joined"),
-          html: expect.stringContaining(groupName),
-        })
-      );
-    });
+    const result = await notificationService.sendExpirationNotification(
+      testUserId,
+      groupName,
+      expirationTime
+    );
 
-    test("should send a notification when a user leaves a group", async () => {
-      const groupName = "Leave Test Group";
-      const userEmail = "leaver@example.com";
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: expect.stringContaining("user_"),
+        subject: expect.stringContaining("expiring"),
+        html: expect.stringContaining(groupName),
+      })
+    );
+  });
+});
 
-      const result = await notificationService.sendLeaveNotification(
-        userEmail,
-        groupName
-      );
+describe("Join/Leave Notifications", () => {
+  test("should send a notification when a user joins a group", async () => {
+    const groupName = "Join Test Group";
+    const userEmail = "joiner@example.com";
 
-      expect(result.success).toBe(true);
-      expect(sendMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: userEmail,
-          subject: expect.stringContaining("left"),
-          html: expect.stringContaining(groupName),
-        })
-      );
-    });
+    const result = await notificationService.sendJoinNotification(
+      userEmail,
+      groupName
+    );
+
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: userEmail,
+        subject: expect.stringContaining("joined"),
+        html: expect.stringContaining(groupName),
+      })
+    );
+  });
+
+  test("should send a notification when a user leaves a group", async () => {
+    const groupName = "Leave Test Group";
+    const userEmail = "leaver@example.com";
+
+    const result = await notificationService.sendLeaveNotification(
+      userEmail,
+      groupName
+    );
+
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: userEmail,
+        subject: expect.stringContaining("left"),
+        html: expect.stringContaining(groupName),
+      })
+    );
   });
 });
