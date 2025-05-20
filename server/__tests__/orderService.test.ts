@@ -100,7 +100,7 @@ describe("Order Service Tests", () => {
     test("should reject empty restaurant name", async () => {
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = "Regenstein Library";
+      const meetupLocation = LOCATION.reg;
 
       const result = await orderService.createOrder(
         testUserId,
@@ -152,7 +152,7 @@ describe("Order Service Tests", () => {
       const longName = "A".repeat(255); // Assuming varchar(255) limit
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = "Regenstein Library";
+      const meetupLocation = LOCATION.reg;
       const userEmail = "longname@example.com";
       const longNameUserId = randomUUID();
 
@@ -195,7 +195,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Delete Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = "Regenstein Library";
+      const meetupLocation = LOCATION.reg;
 
       const result = await orderService.createOrder(
         testUserId,
@@ -231,10 +231,10 @@ describe("Order Service Tests", () => {
 
     test("should cascade delete any related food orders", async () => {
       // Add a order_groups related to the food_orders
-      await db.query("INSERT INTO order_groups (id, user_id) VALUES ($1, $2)", [
-        testOrderId,
-        testUserId,
-      ]);
+      await db.query(
+        "INSERT INTO order_groups (food_order_id, user_id) VALUES ($1, $2)",
+        [testOrderId, testUserId],
+      );
 
       // Delete the order
       const result = await orderService.deleteOrder(testOrderId);
@@ -276,7 +276,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Integration Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = "Regenstein Library";
+      const meetupLocation = LOCATION.reg;
 
       const result = await orderService.createOrder(
         userId,
@@ -309,7 +309,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Join Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = "Regenstein Library";
+      const meetupLocation = LOCATION.reg;
 
       const result = await orderService.createOrder(
         testUserId,
@@ -434,7 +434,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Past Expiration Restaurant";
       const pastExpiration = new Date();
       pastExpiration.setHours(pastExpiration.getHours() - 2); // 2 hours in the past
-      const meetupLocation = "Regenstein Library";
+      const meetupLocation = LOCATION.reg;
 
       const result = await orderService.createOrder(
         testUserId,
@@ -450,7 +450,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Limited Size Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = "Harper Library";
+      const meetupLocation = LOCATION.harper;
       const maxSize = 5; // Limit to 5 members
 
       const result = await orderService.createOrder(
@@ -477,11 +477,7 @@ describe("Order Service Tests", () => {
     // Setup: Create test orders in different locations
     beforeEach(async () => {
       testOrderIds = [];
-      const locations = [
-        "Regenstein Library",
-        "Harper Library",
-        "John Crerar Library",
-      ];
+      const locations = [LOCATION.reg, LOCATION.harper, LOCATION.jcl];
       const restaurant = "Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);

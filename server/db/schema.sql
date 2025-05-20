@@ -106,7 +106,7 @@ BEGIN
   END IF;
 
   -- Delete from order_groups
-  DELETE FROM order_groups WHERE id = p_order_id;
+  DELETE FROM order_groups WHERE food_order_id = p_order_id;
 
   -- Delete from food_orders
   DELETE FROM food_orders WHERE id = p_order_id;

@@ -134,7 +134,6 @@ export async function leaveOrder(
     );
 
     if (alreadyMember.rows.length === 0) {
-      console.log("Here: (2)");
       return {
         success: false,
         error: "You are not a member of this order",
