@@ -1,6 +1,6 @@
 import * as userService from "../services/userService";
-import { pool as db } from "../db/db";
 import * as notificationService from "../services/notificationService";
+import { pool as db } from "../db/db";
 
 beforeEach(async () => {
   await db.query("BEGIN");
@@ -164,14 +164,17 @@ describe("User Service Tests", () => {
   });
 
   test("should send a join notification email", async () => {
-    const emailService = require('resend'); // or wherever your wrapper is
+    const emailService = require("resend"); // or wherever your wrapper is
     const resendInstance = new emailService.Resend();
     const sendMock = resendInstance.emails.send;
 
     const userEmail = "user@example.com";
     const groupName = "Pizza Lovers";
 
-    const result = await notificationService.sendJoinNotification(userEmail, groupName);
+    const result = await notificationService.sendJoinNotification(
+      userEmail,
+      groupName
+    );
 
     expect(result.success).toBe(true);
     expect(sendMock).toHaveBeenCalledWith(
@@ -184,7 +187,7 @@ describe("User Service Tests", () => {
   });
 
   test("should send expiration notification email", async () => {
-    const emailService = require('resend');
+    const emailService = require("resend");
     const resendInstance = new emailService.Resend();
     const sendMock = resendInstance.emails.send;
 
@@ -192,7 +195,11 @@ describe("User Service Tests", () => {
     const groupName = "Sushi Squad";
     const expirationTime = new Date(Date.now() + 3600000); // 1 hour
 
-    const result = await notificationService.sendExpirationNotification(userEmail, groupName, expirationTime);
+    const result = await notificationService.sendExpirationNotification(
+      userEmail,
+      groupName,
+      expirationTime
+    );
 
     expect(result.success).toBe(true);
     expect(sendMock).toHaveBeenCalledWith(
@@ -205,14 +212,17 @@ describe("User Service Tests", () => {
   });
 
   test("should send a leave notification email", async () => {
-    const emailService = require('resend');
+    const emailService = require("resend");
     const resendInstance = new emailService.Resend();
     const sendMock = resendInstance.emails.send;
 
     const userEmail = "user@example.com";
     const groupName = "Taco Tuesday";
 
-    const result = await notificationService.sendLeaveNotification(userEmail, groupName);
+    const result = await notificationService.sendLeaveNotification(
+      userEmail,
+      groupName
+    );
 
     expect(result.success).toBe(true);
     expect(sendMock).toHaveBeenCalledWith(

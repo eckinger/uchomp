@@ -2,13 +2,15 @@ import * as orderService from "../services/orderService";
 import * as userService from "../services/userService";
 import { pool as db } from "../db/db";
 import { randomUUID } from "crypto";
+import { LOCATION } from "../models/location";
 let testUserId: string;
 
 async function createTestUser(): Promise<string> {
   const id = randomUUID();
+  const randomCell = `555-555-${Math.floor(1000 + Math.random() * 9000)}`;
   await db.query(
     "INSERT INTO users (id, email, name, cell) VALUES ($1, $2, $3, $4)",
-    [id, `user_${id}@example.com`, "Test User", "555-555-5555"],
+    [id, `user_${id}@example.com`, "Test User", randomCell]
   );
   return id;
 }
@@ -43,7 +45,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation,
+        meetupLocation
       );
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
@@ -67,13 +69,13 @@ describe("Order Service Tests", () => {
           testUserId,
           restaurant,
           expiration,
-          meetupLocation,
+          meetupLocation
         );
         expect(result.success).toBe(true);
 
         const orderRecord = await db.query(
           "SELECT location FROM food_orders WHERE id = $1",
-          [result.orderId],
+          [result.orderId]
         );
         expect(orderRecord.rows[0].location).toBe(meetupLocation);
       }
@@ -89,7 +91,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        invalidLocation,
+        invalidLocation
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Invalid Location");
@@ -104,7 +106,7 @@ describe("Order Service Tests", () => {
         testUserId,
         "",
         expiration,
-        meetupLocation,
+        meetupLocation
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Restaurant name is required.");
@@ -120,7 +122,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         pastExpiration,
-        meetupLocation,
+        meetupLocation
       );
 
       expect(result.success).toBe(false);
@@ -139,7 +141,7 @@ describe("Order Service Tests", () => {
         fakeUUID,
         restaurant,
         new Date(Date.now() + 10000),
-        meetupLocation,
+        meetupLocation
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("User not found");
@@ -164,13 +166,13 @@ describe("Order Service Tests", () => {
           testUserId,
           longName,
           expiration,
-          meetupLocation,
+          meetupLocation
         );
         expect(result.success).toBe(true);
 
         const orderRecord = await db.query(
           "SELECT restaurant FROM food_orders WHERE id = $1",
-          [result.orderId],
+          [result.orderId]
         );
         expect(orderRecord.rows[0].restaurant).toBe(longName);
       } catch (error) {
@@ -199,7 +201,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation,
+        meetupLocation
       );
       if (result.orderId === undefined) {
         throw new Error("Order ID is undefined");
@@ -214,7 +216,7 @@ describe("Order Service Tests", () => {
       // Verify order was removed from food_orders table
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [testOrderId],
+        [testOrderId]
       );
       expect(orderRecord.rows.length).toBe(0);
     });
@@ -241,7 +243,7 @@ describe("Order Service Tests", () => {
       // Verify related order_groups was also removed
       const foodOrderRecords = await db.query(
         "SELECT * FROM order_groups WHERE id = $1",
-        [testOrderId],
+        [testOrderId]
       );
       expect(foodOrderRecords.rows.length).toBe(0);
     });
@@ -256,7 +258,7 @@ describe("Order Service Tests", () => {
 
       const codeRecord = await db.query(
         "SELECT key FROM codes WHERE email = $1",
-        [email],
+        [email]
       );
       const code = codeRecord.rows[0].key;
 
@@ -266,7 +268,7 @@ describe("Order Service Tests", () => {
       // Get user ID
       const userRecord = await db.query(
         "SELECT id FROM users WHERE email = $1",
-        [email],
+        [email]
       );
       const userId = userRecord.rows[0].id;
 
@@ -280,7 +282,7 @@ describe("Order Service Tests", () => {
         userId,
         restaurant,
         expiration,
-        meetupLocation,
+        meetupLocation
       );
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
@@ -288,7 +290,7 @@ describe("Order Service Tests", () => {
       // Verify order details
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [result.orderId],
+        [result.orderId]
       );
       expect(orderRecord.rows[0].owner_id).toBe(userId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
@@ -296,8 +298,8 @@ describe("Order Service Tests", () => {
     });
   });
 
-  // Tests for joinGroup function
-  describe("joinGroup", () => {
+  // Tests for joinOrder function
+  describe("joinOrder", () => {
     let testOrderId: string;
     let secondUserId: string;
 
@@ -313,7 +315,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation,
+        meetupLocation
       );
       if (result.orderId === undefined) {
         throw new Error("Order ID is undefined");
@@ -324,32 +326,32 @@ describe("Order Service Tests", () => {
       secondUserId = await createTestUser();
     });
 
-    test("should allow a user to join a group", async () => {
-      const result = await orderService.joinGroup(secondUserId, testOrderId);
+    test("should allow a user to join a order", async () => {
+      const result = await orderService.joinOrder(secondUserId, testOrderId);
       expect(result.success).toBe(true);
 
       // Verify user was added to the order_groups table
-      const groupRecord = await db.query(
+      const orderRecord = await db.query(
         "SELECT * FROM order_groups WHERE user_id = $1 AND food_order_id = $2",
-        [secondUserId, testOrderId],
+        [secondUserId, testOrderId]
       );
-      expect(groupRecord.rows.length).toBe(1);
+      expect(orderRecord.rows.length).toBe(1);
     });
 
-    test("should not allow the owner to join their own group", async () => {
-      const result = await orderService.joinGroup(testUserId, testOrderId);
+    test("should not allow the owner to join their own order", async () => {
+      const result = await orderService.joinOrder(testUserId, testOrderId);
       expect(result.success).toBe(false);
-      expect(result.error).toContain("cannot join your own group");
+      expect(result.error).toContain("cannot join your own order");
     });
 
-    test("should not allow joining a nonexistent group", async () => {
+    test("should not allow joining a nonexistent order", async () => {
       const fakeOrderId = "123e4567-e89b-12d3-a456-426614174000";
-      const result = await orderService.joinGroup(secondUserId, fakeOrderId);
+      const result = await orderService.joinOrder(secondUserId, fakeOrderId);
       expect(result.success).toBe(false);
       expect(result.error).toContain("Order not found");
     });
 
-    test("should not allow joining an expired group", async () => {
+    test("should not allow joining an expired order", async () => {
       // Create an expired order
       const restaurant = "Expired Restaurant";
       const pastExpiration = new Date();
@@ -359,111 +361,110 @@ describe("Order Service Tests", () => {
       // Manually insert an expired order
       const { rows } = await db.query(
         "INSERT INTO food_orders (owner_id, restaurant, expiration, location) VALUES ($1, $2, $3, $4) RETURNING id",
-        [testUserId, restaurant, pastExpiration, meetupLocation],
+        [testUserId, restaurant, pastExpiration, meetupLocation]
       );
       const expiredOrderId = rows[0].id;
 
-      const result = await orderService.joinGroup(secondUserId, expiredOrderId);
+      const result = await orderService.joinOrder(secondUserId, expiredOrderId);
       expect(result.success).toBe(false);
       expect(result.error).toContain("expired");
     });
 
-    test("should not allow a user to join a group twice", async () => {
+    test("should not allow a user to join a order twice", async () => {
       // Join once
-      await orderService.joinGroup(secondUserId, testOrderId);
+      await orderService.joinOrder(secondUserId, testOrderId);
 
       // Try to join again
-      const result = await orderService.joinGroup(secondUserId, testOrderId);
+      const result = await orderService.joinOrder(secondUserId, testOrderId);
       expect(result.success).toBe(false);
       expect(result.error).toContain("already a member");
     });
   });
 
-  // Tests for createGroup function
-  describe("createGroup", () => {
-    test("should create a new group with valid inputs and make owner join automatically", async () => {
-      const restaurant = "New Group Restaurant";
+  // Tests for createOrder function
+  describe("createOrder", () => {
+    test("should create a new order with valid inputs and make owner join automatically", async () => {
+      const restaurant = "New Order Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 2); // Expires in 2 hours
       const meetupLocation = "John Crerar Library";
 
-      const result = await orderService.createGroup(
+      const result = await orderService.createOrder(
         testUserId,
         restaurant,
         expiration,
-        meetupLocation,
+        meetupLocation
       );
       expect(result.success).toBe(true);
-      expect(result.groupId).toBeDefined();
+      expect(result.orderId).toBeDefined();
 
       // Verify order was created
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [result.groupId],
+        [result.orderId]
       );
       expect(orderRecord.rows.length).toBe(1);
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
 
-      // Verify owner was automatically added to group
+      // Verify owner was automatically added to order
       const memberRecord = await db.query(
         "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-        [result.groupId, testUserId],
+        [result.orderId, testUserId]
       );
       expect(memberRecord.rows.length).toBe(1);
     });
 
-    test("should reject creating a group with invalid location", async () => {
+    test("should reject creating a order with invalid location", async () => {
       const restaurant = "Invalid Location Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
       const invalidLocation = "Student Center"; // Not a valid location
 
-      const result = await orderService.createGroup(
+      const result = await orderService.createOrder(
         testUserId,
         restaurant,
         expiration,
-        invalidLocation,
+        invalidLocation
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Invalid Location");
     });
 
-    test("should reject creating a group with past expiration", async () => {
+    test("should reject creating a order with past expiration", async () => {
       const restaurant = "Past Expiration Restaurant";
       const pastExpiration = new Date();
       pastExpiration.setHours(pastExpiration.getHours() - 2); // 2 hours in the past
       const meetupLocation = "Regenstein Library";
 
-      const result = await orderService.createGroup(
+      const result = await orderService.createOrder(
         testUserId,
         restaurant,
         pastExpiration,
-        meetupLocation,
+        meetupLocation
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("future");
     });
 
-    test("should set maximum group size if provided", async () => {
+    test("should set maximum order size if provided", async () => {
       const restaurant = "Limited Size Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
       const meetupLocation = "Harper Library";
       const maxSize = 5; // Limit to 5 members
 
-      const result = await orderService.createGroup(
+      const result = await orderService.createOrder(
         testUserId,
         restaurant,
         expiration,
-        meetupLocation,
-        maxSize,
+        meetupLocation
       );
       expect(result.success).toBe(true);
 
       // Verify size was set correctly
       const orderRecord = await db.query(
         "SELECT size FROM food_orders WHERE id = $1",
-        [result.groupId],
+        [result.orderId]
       );
       expect(orderRecord.rows[0].size).toBe(maxSize);
     });
@@ -479,7 +480,7 @@ describe("Order Service Tests", () => {
       const locations = [
         "Regenstein Library",
         "Harper Library",
-        "John Crerar Library"
+        "John Crerar Library",
       ];
       const restaurant = "Test Restaurant";
       const expiration = new Date();
@@ -508,19 +509,19 @@ describe("Order Service Tests", () => {
     });
 
     test("should filter orders by specific location", async () => {
-      const location = "Regenstein Library";
+      const location = LOCATION.reg;
       const result = await orderService.getOrders(location);
       expect(result.success).toBe(true);
       expect(result.orders).toBeDefined();
 
       // Verify all returned orders are from the specified location
-      result.orders.forEach(order => {
+      result.orders.forEach((order) => {
         expect(order.location).toBe(location);
       });
     });
 
     test("should return empty array for non-existent location", async () => {
-      const invalidLocation = "Student Center";
+      const invalidLocation = "Student Center" as LOCATION;
       const result = await orderService.getOrders(invalidLocation);
       expect(result.success).toBe(true);
       expect(result.orders).toBeDefined();
@@ -528,13 +529,13 @@ describe("Order Service Tests", () => {
     });
 
     test("should handle case-insensitive location matching", async () => {
-      const location = "regenstein library";
+      const location = LOCATION.reg;
       const result = await orderService.getOrders(location);
       expect(result.success).toBe(true);
       expect(result.orders).toBeDefined();
 
       // Verify all returned orders are from Regenstein Library
-      result.orders.forEach(order => {
+      result.orders.forEach((order) => {
         expect(order.location.toLowerCase()).toBe(location.toLowerCase());
       });
     });
@@ -544,7 +545,7 @@ describe("Order Service Tests", () => {
       const expiredRestaurant = "Expired Restaurant";
       const pastExpiration = new Date();
       pastExpiration.setHours(pastExpiration.getHours() - 1);
-      const location = "Regenstein Library";
+      const location = LOCATION.reg;
 
       await orderService.createOrder(
         testUserId,
@@ -558,14 +559,14 @@ describe("Order Service Tests", () => {
       expect(result.orders).toBeDefined();
 
       // Verify no expired orders are returned
-      result.orders.forEach(order => {
+      result.orders.forEach((order) => {
         expect(new Date(order.expiration) > new Date()).toBe(true);
       });
     });
   });
 
-  // Tests for leaveGroup function with ownership transfer
-  describe("leaveGroup", () => {
+  // Tests for leaveOrder function with ownership transfer
+  describe("leaveOrder", () => {
     let testOrderId: string;
     let secondUserId: string;
     let thirdUserId: string;
@@ -582,7 +583,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation,
+        meetupLocation
       );
       if (result.orderId === undefined) {
         throw new Error("Order ID is undefined");
@@ -593,85 +594,85 @@ describe("Order Service Tests", () => {
       secondUserId = await createTestUser();
       thirdUserId = await createTestUser();
 
-      // Add users to the group in sequence
-      await orderService.joinGroup(secondUserId, testOrderId);
-      await orderService.joinGroup(thirdUserId, testOrderId);
+      // Add users to the order in sequence
+      await orderService.joinOrder(secondUserId, testOrderId);
+      await orderService.joinOrder(thirdUserId, testOrderId);
     });
 
     test("should transfer ownership to next member when owner leaves", async () => {
-      // Owner leaves the group
-      const result = await orderService.leaveGroup(testUserId, testOrderId);
+      // Owner leaves the order
+      const result = await orderService.leaveOrder(testUserId, testOrderId);
       expect(result.success).toBe(true);
 
       // Verify ownership was transferred to the first member who joined
       const orderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId],
+        [testOrderId]
       );
       expect(orderRecord.rows[0].owner_id).toBe(secondUserId);
     });
 
-    test("should delete group when last member leaves", async () => {
+    test("should delete order when last member leaves", async () => {
       // First, owner leaves
-      await orderService.leaveGroup(testUserId, testOrderId);
+      await orderService.leaveOrder(testUserId, testOrderId);
 
       // Then second user leaves
-      await orderService.leaveGroup(secondUserId, testOrderId);
+      await orderService.leaveOrder(secondUserId, testOrderId);
 
       // Finally, last user leaves
-      const result = await orderService.leaveGroup(thirdUserId, testOrderId);
+      const result = await orderService.leaveOrder(thirdUserId, testOrderId);
       expect(result.success).toBe(true);
 
-      // Verify group was deleted
+      // Verify order was deleted
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [testOrderId],
+        [testOrderId]
       );
       expect(orderRecord.rows.length).toBe(0);
     });
 
-    test("should not allow non-members to leave group", async () => {
+    test("should not allow non-members to leave order", async () => {
       const nonMemberId = await createTestUser();
-      const result = await orderService.leaveGroup(nonMemberId, testOrderId);
+      const result = await orderService.leaveOrder(nonMemberId, testOrderId);
       expect(result.success).toBe(false);
       expect(result.error).toContain("not a member");
     });
 
-    test("should maintain group when non-owner member leaves", async () => {
+    test("should maintain order when non-owner member leaves", async () => {
       // Non-owner member leaves
-      const result = await orderService.leaveGroup(secondUserId, testOrderId);
+      const result = await orderService.leaveOrder(secondUserId, testOrderId);
       expect(result.success).toBe(true);
 
-      // Verify group still exists and ownership unchanged
+      // Verify order still exists and ownership unchanged
       const orderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId],
+        [testOrderId]
       );
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
     });
 
     test("should handle ownership transfer with multiple members", async () => {
-      // Create a fourth user and add them to the group
+      // Create a fourth user and add them to the order
       const fourthUserId = await createTestUser();
-      await orderService.joinGroup(fourthUserId, testOrderId);
+      await orderService.joinOrder(fourthUserId, testOrderId);
 
       // Owner leaves
-      await orderService.leaveGroup(testUserId, testOrderId);
+      await orderService.leaveOrder(testUserId, testOrderId);
 
       // Verify ownership transferred to second user (first to join)
       const orderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId],
+        [testOrderId]
       );
       expect(orderRecord.rows[0].owner_id).toBe(secondUserId);
 
       // Second user (now owner) leaves
-      await orderService.leaveGroup(secondUserId, testOrderId);
+      await orderService.leaveOrder(secondUserId, testOrderId);
 
       // Verify ownership transferred to third user
       const updatedOrderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId],
+        [testOrderId]
       );
       expect(updatedOrderRecord.rows[0].owner_id).toBe(thirdUserId);
     });
