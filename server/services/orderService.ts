@@ -88,7 +88,7 @@ export async function joinOrder(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const result = await pool.query(`SELECT * FROM join_order($1, $2)`, [
-      userId, groupId,
+      userId, orderId,
     ]);
 
     const row = result.rows[0];
