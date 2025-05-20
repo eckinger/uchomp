@@ -39,7 +39,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1); // Expires in 1 hour
-      const meetupLocation = "Regenstein Library"; // Valid campus location
+      const meetupLocation = LOCATION.reg; // Valid campus location
 
       const result = await orderService.createOrder(
         testUserId,
@@ -566,7 +566,7 @@ describe("Order Service Tests", () => {
   });
 
   // Tests for leaveOrder function with ownership transfer
-  describe.only("leaveOrder", () => {
+  describe("leaveOrder", () => {
     let testOrderId: string;
     let secondUserId: string;
     let thirdUserId: string;
@@ -577,7 +577,7 @@ describe("Order Service Tests", () => {
       const restaurant = "Leave Test Restaurant";
       const expiration = new Date();
       expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = "Regenstein Library";
+      const meetupLocation = LOCATION.reg;
 
       const result = await orderService.createOrder(
         testUserId,

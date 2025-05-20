@@ -62,6 +62,10 @@ BEGIN
   VALUES (p_owner_id, p_restaurant, p_expiration, p_location)
   RETURNING id INTO order_id;
 
+  -- Add owner to order_groups
+  INSERT INTO order_groups (food_order_id, user_id, created_at)
+  VALUES (order_id, p_owner_id, CURRENT_TIME);
+
   RETURN QUERY SELECT TRUE, order_id, NULL;
 END;
 $$;
