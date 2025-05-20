@@ -18,12 +18,12 @@ export async function createOrder(
   owner_id: number | string,
   restaurant: string,
   expiration: Date,
-  loc: string
+  loc: string,
 ): Promise<{ success: boolean; orderId?: string; error?: string }> {
   try {
     const result = await pool.query(
       `SELECT * FROM create_food_order($1, $2, $3, $4)`,
-      [owner_id, restaurant, expiration, loc]
+      [owner_id, restaurant, expiration, loc],
     );
 
     const row = result.rows[0];
@@ -33,13 +33,17 @@ export async function createOrder(
 
     return { success: true, orderId: row.order_id };
   } catch (err) {
+    // TODO: gracefully catch enum loc error. This works fine for now but is ugly
     console.error("Error creating order:", err);
+    if ((err as Error).message.includes("invalid input value for enum locs")) {
+      return { success: false, error: "Invalid Location Enum" };
+    }
     return { success: false, error: (err as Error).message };
   }
 }
 
 export async function deleteOrder(
-  orderId: string
+  orderId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const result = await pool.query(`SELECT * FROM delete_order($1)`, [
@@ -61,13 +65,13 @@ export async function deleteOrder(
 
 export async function joinOrder(
   userId: string,
-  groupId: string
+  orderId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // check order exists and not expired
     const orderCheck = await pool.query(
       "SELECT owner_id, expiration FROM food_orders WHERE id = $1",
-      [groupId]
+      [orderId],
     );
 
     if (orderCheck.rows.length === 0) {
@@ -78,7 +82,7 @@ export async function joinOrder(
 
     // if user trying to join own group
     if (order.owner_id === userId) {
-      return { success: false, error: "You cannot join your own group" };
+      return { success: false, error: "You cannot join your own order" };
     }
 
     // check if order expired
@@ -89,7 +93,7 @@ export async function joinOrder(
     // check if user is already member
     const alreadyMember = await pool.query(
       "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-      [groupId, userId]
+      [orderId, userId],
     );
 
     if (alreadyMember.rows.length > 0) {
@@ -102,7 +106,7 @@ export async function joinOrder(
     // add user to group
     await pool.query(
       "INSERT INTO order_groups (food_order_id, user_id) VALUES ($1, $2)",
-      [groupId, userId]
+      [orderId, userId],
     );
 
     return { success: true };
@@ -114,41 +118,69 @@ export async function joinOrder(
 
 export async function leaveOrder(
   userId: string,
-  groupId: string
+  orderId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // check order exists
     const orderCheck = await pool.query(
       "SELECT owner_id, expiration FROM food_orders WHERE id = $1",
-      [groupId]
+      [orderId],
     );
 
     if (orderCheck.rows.length === 0) {
       return { success: false, error: "Order not found" };
     }
 
-    const order = orderCheck.rows[0];
-
-    // check if order expired
-    if (new Date(order.expiration) < new Date()) {
-      return { success: false, error: "This group has expired" };
-    }
     // check if user is already member
     const alreadyMember = await pool.query(
       "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-      [groupId, userId]
+      [orderId, userId],
     );
 
     if (alreadyMember.rows.length === 0) {
       return {
         success: false,
-        error: "You are not a member of this group",
+        error: "You are not a member of this order",
       };
     }
 
+    const isOwner = orderCheck.rows[0].owner_id === userId;
+
+    if (isOwner) {
+      const nextMemberResult = await pool.query(
+        "SELECT user_id FROM order_groups WHERE food_order_id = $1 AND user_id != $2 ORDER BY created_at ASC LIMIT 1",
+        [orderId, userId],
+      );
+
+      if (nextMemberResult.rows.length > 0) {
+        const nextOwnerId = nextMemberResult.rows[0].user_id;
+        await pool.query("UPDATE food_orders SET owner_id = $1 WHERE id = $2", [
+          nextOwnerId,
+          orderId,
+        ]);
+      }
+    }
+
+    // Remove user from order
     await pool.query(
-      "DELETE FROM order_groups (food_order_id, user_id) VALUES ($1, $2)",
-      [groupId, userId]
+      "DELETE FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
+      [orderId, userId],
     );
+
+    // Check if there are any members left in the order
+    const remainingMembersResult = await pool.query(
+      "SELECT COUNT(*) as count FROM order_groups WHERE food_order_id = $1",
+      [orderId],
+    );
+
+    const remainingMembers = parseInt(remainingMembersResult.rows[0].count);
+
+    // If no members left, delete the order
+    if (remainingMembers === 0) {
+      await pool.query("DELETE FROM food_orders WHERE id = $1", [orderId]);
+    }
+
+    // Commit transaction
 
     return { success: true };
   } catch (e) {

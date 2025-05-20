@@ -19,7 +19,7 @@ export const createOrder: RequestHandler = async (req, res) => {
       owner_id,
       restaurant,
       expiration,
-      loc
+      loc,
     );
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
@@ -36,6 +36,48 @@ export const deleteOrder: RequestHandler = async (req, res) => {
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     console.error("Error in /delete-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const joinOrder: RequestHandler = async (req, res) => {
+  const orderId = req.params.id;
+  const { user_id } = req.body;
+
+  if (!user_id) {
+    res.status(400).json({
+      success: false,
+      error: "User ID is required",
+    });
+    return;
+  }
+
+  try {
+    const result = await orderService.joinOrder(user_id, orderId);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /join-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const leaveOrder: RequestHandler = async (req, res) => {
+  const orderId = req.params.id;
+  const { user_id } = req.body;
+
+  if (!user_id) {
+    res.status(400).json({
+      success: false,
+      error: "User ID is required",
+    });
+    return;
+  }
+
+  try {
+    const result = await orderService.leaveOrder(user_id, orderId);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /leave-order:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
 };
