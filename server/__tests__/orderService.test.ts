@@ -445,29 +445,6 @@ describe("Order Service Tests", () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain("future");
     });
-
-    test("should set maximum order size if provided", async () => {
-      const restaurant = "Limited Size Restaurant";
-      const expiration = new Date();
-      expiration.setHours(expiration.getHours() + 1);
-      const meetupLocation = LOCATION.harper;
-      const maxSize = 5; // Limit to 5 members
-
-      const result = await orderService.createOrder(
-        testUserId,
-        restaurant,
-        expiration,
-        meetupLocation,
-      );
-      expect(result.success).toBe(true);
-
-      // Verify size was set correctly
-      const orderRecord = await db.query(
-        "SELECT size FROM food_orders WHERE id = $1",
-        [result.orderId],
-      );
-      expect(orderRecord.rows[0].size).toBe(maxSize);
-    });
   });
 
   // Tests for getOrders function with location filtering

@@ -33,7 +33,11 @@ export async function createOrder(
 
     return { success: true, orderId: row.order_id };
   } catch (err) {
+    // TODO: gracefully catch enum loc error. This works fine for now but is ugly
     console.error("Error creating order:", err);
+    if ((err as Error).message.includes("invalid input value for enum locs")) {
+      return { success: false, error: "Invalid Location Enum" };
+    }
     return { success: false, error: (err as Error).message };
   }
 }
