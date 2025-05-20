@@ -37,12 +37,12 @@ export async function createOrder(
   owner_id: number | string,
   restaurant: string,
   expiration: Date,
-  loc: string
+  loc: string,
 ): Promise<{ success: boolean; orderId?: string; error?: string }> {
   try {
     const result = await pool.query(
       `SELECT * FROM create_food_order($1, $2, $3, $4)`,
-      [owner_id, restaurant, expiration, loc]
+      [owner_id, restaurant, expiration, loc],
     );
 
     const row = result.rows[0];
@@ -52,13 +52,17 @@ export async function createOrder(
 
     return { success: true, orderId: row.order_id };
   } catch (err) {
+    // TODO: gracefully catch enum loc error. This works fine for now but is ugly
     console.error("Error creating order:", err);
+    if ((err as Error).message.includes("invalid input value for enum locs")) {
+      return { success: false, error: "Invalid Location Enum" };
+    }
     return { success: false, error: (err as Error).message };
   }
 }
 
 export async function deleteOrder(
-  orderId: string
+  orderId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const result = await pool.query(`SELECT * FROM delete_order($1)`, [
@@ -80,7 +84,7 @@ export async function deleteOrder(
 
 export async function joinOrder(
   userId: string,
-  groupId: string
+  orderId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const result = await pool.query(`SELECT * FROM join_order($1, $2)`, [
