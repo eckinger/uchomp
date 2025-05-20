@@ -35,7 +35,7 @@ Note: We all worked together, helped on everything, and the divisons of labor be
 - **Member view for group with participation counts** – *Mai*
 - **GLeave group (with ownership transfer and group deletion logic)** – *Mai*
 - **Fixed, Improved, and Expanded several testing frameworks, particularly the notificationservice tests to reflect changes in our approach** - *Sam and Ben*
-- **Debugging join and create group** - *Andrew*
+- **Debugging join and create group** - *Andrew and Alex*
 - **Code Chiropractor At Large** - *Ben*
 - **Getting mock to run tests for email** - *Ben and Sam*
 
