@@ -18,12 +18,12 @@ export async function createOrder(
   owner_id: number | string,
   restaurant: string,
   expiration: Date,
-  loc: string
+  loc: string,
 ): Promise<{ success: boolean; orderId?: string; error?: string }> {
   try {
     const result = await pool.query(
       `SELECT * FROM create_food_order($1, $2, $3, $4)`,
-      [owner_id, restaurant, expiration, loc]
+      [owner_id, restaurant, expiration, loc],
     );
 
     const row = result.rows[0];
@@ -39,7 +39,7 @@ export async function createOrder(
 }
 
 export async function deleteOrder(
-  orderId: string
+  orderId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const result = await pool.query(`SELECT * FROM delete_order($1)`, [
@@ -61,13 +61,13 @@ export async function deleteOrder(
 
 export async function joinOrder(
   userId: string,
-  groupId: string
+  groupId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // check order exists and not expired
     const orderCheck = await pool.query(
       "SELECT owner_id, expiration FROM food_orders WHERE id = $1",
-      [groupId]
+      [groupId],
     );
 
     if (orderCheck.rows.length === 0) {
@@ -78,7 +78,7 @@ export async function joinOrder(
 
     // if user trying to join own group
     if (order.owner_id === userId) {
-      return { success: false, error: "You cannot join your own group" };
+      return { success: false, error: "You cannot join your own order" };
     }
 
     // check if order expired
@@ -89,7 +89,7 @@ export async function joinOrder(
     // check if user is already member
     const alreadyMember = await pool.query(
       "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-      [groupId, userId]
+      [groupId, userId],
     );
 
     if (alreadyMember.rows.length > 0) {
@@ -102,7 +102,7 @@ export async function joinOrder(
     // add user to group
     await pool.query(
       "INSERT INTO order_groups (food_order_id, user_id) VALUES ($1, $2)",
-      [groupId, userId]
+      [groupId, userId],
     );
 
     return { success: true };
@@ -114,12 +114,12 @@ export async function joinOrder(
 
 export async function leaveOrder(
   userId: string,
-  groupId: string
+  groupId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const orderCheck = await pool.query(
       "SELECT owner_id, expiration FROM food_orders WHERE id = $1",
-      [groupId]
+      [groupId],
     );
 
     if (orderCheck.rows.length === 0) {
@@ -135,7 +135,7 @@ export async function leaveOrder(
     // check if user is already member
     const alreadyMember = await pool.query(
       "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-      [groupId, userId]
+      [groupId, userId],
     );
 
     if (alreadyMember.rows.length === 0) {
@@ -147,7 +147,7 @@ export async function leaveOrder(
 
     await pool.query(
       "DELETE FROM order_groups (food_order_id, user_id) VALUES ($1, $2)",
-      [groupId, userId]
+      [groupId, userId],
     );
 
     return { success: true };

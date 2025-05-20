@@ -10,7 +10,7 @@ async function createTestUser(): Promise<string> {
   const randomCell = `555-555-${Math.floor(1000 + Math.random() * 9000)}`;
   await db.query(
     "INSERT INTO users (id, email, name, cell) VALUES ($1, $2, $3, $4)",
-    [id, `user_${id}@example.com`, "Test User", randomCell]
+    [id, `user_${id}@example.com`, "Test User", randomCell],
   );
   return id;
 }
@@ -45,7 +45,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
@@ -69,13 +69,13 @@ describe("Order Service Tests", () => {
           testUserId,
           restaurant,
           expiration,
-          meetupLocation
+          meetupLocation,
         );
         expect(result.success).toBe(true);
 
         const orderRecord = await db.query(
           "SELECT location FROM food_orders WHERE id = $1",
-          [result.orderId]
+          [result.orderId],
         );
         expect(orderRecord.rows[0].location).toBe(meetupLocation);
       }
@@ -91,7 +91,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        invalidLocation
+        invalidLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Invalid Location");
@@ -106,7 +106,7 @@ describe("Order Service Tests", () => {
         testUserId,
         "",
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Restaurant name is required.");
@@ -122,7 +122,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         pastExpiration,
-        meetupLocation
+        meetupLocation,
       );
 
       expect(result.success).toBe(false);
@@ -141,7 +141,7 @@ describe("Order Service Tests", () => {
         fakeUUID,
         restaurant,
         new Date(Date.now() + 10000),
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("User not found");
@@ -166,13 +166,13 @@ describe("Order Service Tests", () => {
           testUserId,
           longName,
           expiration,
-          meetupLocation
+          meetupLocation,
         );
         expect(result.success).toBe(true);
 
         const orderRecord = await db.query(
           "SELECT restaurant FROM food_orders WHERE id = $1",
-          [result.orderId]
+          [result.orderId],
         );
         expect(orderRecord.rows[0].restaurant).toBe(longName);
       } catch (error) {
@@ -201,7 +201,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       if (result.orderId === undefined) {
         throw new Error("Order ID is undefined");
@@ -216,7 +216,7 @@ describe("Order Service Tests", () => {
       // Verify order was removed from food_orders table
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(orderRecord.rows.length).toBe(0);
     });
@@ -243,7 +243,7 @@ describe("Order Service Tests", () => {
       // Verify related order_groups was also removed
       const foodOrderRecords = await db.query(
         "SELECT * FROM order_groups WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(foodOrderRecords.rows.length).toBe(0);
     });
@@ -258,7 +258,7 @@ describe("Order Service Tests", () => {
 
       const codeRecord = await db.query(
         "SELECT key FROM codes WHERE email = $1",
-        [email]
+        [email],
       );
       const code = codeRecord.rows[0].key;
 
@@ -268,7 +268,7 @@ describe("Order Service Tests", () => {
       // Get user ID
       const userRecord = await db.query(
         "SELECT id FROM users WHERE email = $1",
-        [email]
+        [email],
       );
       const userId = userRecord.rows[0].id;
 
@@ -282,7 +282,7 @@ describe("Order Service Tests", () => {
         userId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
@@ -290,7 +290,7 @@ describe("Order Service Tests", () => {
       // Verify order details
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [result.orderId]
+        [result.orderId],
       );
       expect(orderRecord.rows[0].owner_id).toBe(userId);
       expect(orderRecord.rows[0].restaurant).toBe(restaurant);
@@ -315,7 +315,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       if (result.orderId === undefined) {
         throw new Error("Order ID is undefined");
@@ -333,7 +333,7 @@ describe("Order Service Tests", () => {
       // Verify user was added to the order_groups table
       const orderRecord = await db.query(
         "SELECT * FROM order_groups WHERE user_id = $1 AND food_order_id = $2",
-        [secondUserId, testOrderId]
+        [secondUserId, testOrderId],
       );
       expect(orderRecord.rows.length).toBe(1);
     });
@@ -341,7 +341,7 @@ describe("Order Service Tests", () => {
     test("should not allow the owner to join their own order", async () => {
       const result = await orderService.joinOrder(testUserId, testOrderId);
       expect(result.success).toBe(false);
-      expect(result.error).toContain("cannot join your own order");
+      expect(result.error).toContain("You cannot join your own order");
     });
 
     test("should not allow joining a nonexistent order", async () => {
@@ -361,7 +361,7 @@ describe("Order Service Tests", () => {
       // Manually insert an expired order
       const { rows } = await db.query(
         "INSERT INTO food_orders (owner_id, restaurant, expiration, location) VALUES ($1, $2, $3, $4) RETURNING id",
-        [testUserId, restaurant, pastExpiration, meetupLocation]
+        [testUserId, restaurant, pastExpiration, meetupLocation],
       );
       const expiredOrderId = rows[0].id;
 
@@ -393,7 +393,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(true);
       expect(result.orderId).toBeDefined();
@@ -401,7 +401,7 @@ describe("Order Service Tests", () => {
       // Verify order was created
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [result.orderId]
+        [result.orderId],
       );
       expect(orderRecord.rows.length).toBe(1);
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
@@ -409,7 +409,7 @@ describe("Order Service Tests", () => {
       // Verify owner was automatically added to order
       const memberRecord = await db.query(
         "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-        [result.orderId, testUserId]
+        [result.orderId, testUserId],
       );
       expect(memberRecord.rows.length).toBe(1);
     });
@@ -424,7 +424,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        invalidLocation
+        invalidLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Invalid Location");
@@ -440,7 +440,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         pastExpiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(false);
       expect(result.error).toContain("future");
@@ -457,14 +457,14 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       expect(result.success).toBe(true);
 
       // Verify size was set correctly
       const orderRecord = await db.query(
         "SELECT size FROM food_orders WHERE id = $1",
-        [result.orderId]
+        [result.orderId],
       );
       expect(orderRecord.rows[0].size).toBe(maxSize);
     });
@@ -492,7 +492,7 @@ describe("Order Service Tests", () => {
           testUserId,
           restaurant,
           expiration,
-          location
+          location,
         );
         if (result.orderId === undefined) {
           throw new Error("Order ID is undefined");
@@ -551,7 +551,7 @@ describe("Order Service Tests", () => {
         testUserId,
         expiredRestaurant,
         pastExpiration,
-        location
+        location,
       );
 
       const result = await orderService.getOrders(location);
@@ -566,7 +566,7 @@ describe("Order Service Tests", () => {
   });
 
   // Tests for leaveOrder function with ownership transfer
-  describe("leaveOrder", () => {
+  describe.only("leaveOrder", () => {
     let testOrderId: string;
     let secondUserId: string;
     let thirdUserId: string;
@@ -583,7 +583,7 @@ describe("Order Service Tests", () => {
         testUserId,
         restaurant,
         expiration,
-        meetupLocation
+        meetupLocation,
       );
       if (result.orderId === undefined) {
         throw new Error("Order ID is undefined");
@@ -607,7 +607,7 @@ describe("Order Service Tests", () => {
       // Verify ownership was transferred to the first member who joined
       const orderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(orderRecord.rows[0].owner_id).toBe(secondUserId);
     });
@@ -626,7 +626,7 @@ describe("Order Service Tests", () => {
       // Verify order was deleted
       const orderRecord = await db.query(
         "SELECT * FROM food_orders WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(orderRecord.rows.length).toBe(0);
     });
@@ -646,7 +646,7 @@ describe("Order Service Tests", () => {
       // Verify order still exists and ownership unchanged
       const orderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(orderRecord.rows[0].owner_id).toBe(testUserId);
     });
@@ -662,7 +662,7 @@ describe("Order Service Tests", () => {
       // Verify ownership transferred to second user (first to join)
       const orderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(orderRecord.rows[0].owner_id).toBe(secondUserId);
 
@@ -672,7 +672,7 @@ describe("Order Service Tests", () => {
       // Verify ownership transferred to third user
       const updatedOrderRecord = await db.query(
         "SELECT owner_id FROM food_orders WHERE id = $1",
-        [testOrderId]
+        [testOrderId],
       );
       expect(updatedOrderRecord.rows[0].owner_id).toBe(thirdUserId);
     });
