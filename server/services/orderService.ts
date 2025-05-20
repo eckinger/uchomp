@@ -1,18 +1,37 @@
 import { pool } from "../db/db";
 import { LOCATION } from "../models/location";
 
-export async function getOrders(location?: LOCATION) {
+export async function getOrders(
+  location?: LOCATION
+): Promise<{
+  success: boolean;
+  location?: LOCATION;
+  orders: any[];
+  error?: string;
+}> {
   try {
-    const result = await pool.query("SELECT * FROM get_active_orders()");
+    const result = await pool.query("SELECT * FROM get_orders($1)", [
+      location ?? null,
+    ]);
+
+    const row = result.rows[0];
+
     return {
-      success: true,
-      orders: result.rows,
+      success: row.success,
+      location: row.location,
+      orders: row.orders ?? [],
+      error: row.error ?? undefined,
     };
   } catch (err) {
     console.error("Error fetching orders:", err);
-    return { success: false, error: (err as Error).message, orders: [] };
+    return {
+      success: false,
+      orders: [],
+      error: (err as Error).message,
+    };
   }
 }
+
 
 export async function createOrder(
   owner_id: number | string,
@@ -64,48 +83,14 @@ export async function joinOrder(
   groupId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // check order exists and not expired
-    const orderCheck = await pool.query(
-      "SELECT owner_id, expiration FROM food_orders WHERE id = $1",
-      [groupId]
-    );
+    const result = await pool.query(`SELECT * FROM join_order($1, $2)`, [
+      userId, groupId,
+    ]);
 
-    if (orderCheck.rows.length === 0) {
-      return { success: false, error: "Order not found" };
-    }
+    const row = result.rows[0];
 
-    const order = orderCheck.rows[0];
+    return { success: row.success, error: row.error };
 
-    // if user trying to join own group
-    if (order.owner_id === userId) {
-      return { success: false, error: "You cannot join your own group" };
-    }
-
-    // check if order expired
-    if (new Date(order.expiration) < new Date()) {
-      return { success: false, error: "This group has expired" };
-    }
-
-    // check if user is already member
-    const alreadyMember = await pool.query(
-      "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-      [groupId, userId]
-    );
-
-    if (alreadyMember.rows.length > 0) {
-      return {
-        success: false,
-        error: "You are already a member of this group",
-      };
-    }
-
-    // add user to group
-    await pool.query(
-      "INSERT INTO order_groups (food_order_id, user_id) VALUES ($1, $2)",
-      [groupId, userId]
-    );
-
-    return { success: true };
   } catch (e) {
     console.error("Error joining group:", e);
     return { success: false, error: (e as Error).message };
@@ -114,45 +99,19 @@ export async function joinOrder(
 
 export async function leaveOrder(
   userId: string,
-  groupId: string
+  orderId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const orderCheck = await pool.query(
-      "SELECT owner_id, expiration FROM food_orders WHERE id = $1",
-      [groupId]
-    );
+    const result = await pool.query(
+      'SELECT * FROM leave_order($1, $2)', [
+        userId, orderId
+      ]);
 
-    if (orderCheck.rows.length === 0) {
-      return { success: false, error: "Order not found" };
-    }
+    const row = result.rows[0];
 
-    const order = orderCheck.rows[0];
-
-    // check if order expired
-    if (new Date(order.expiration) < new Date()) {
-      return { success: false, error: "This group has expired" };
-    }
-    // check if user is already member
-    const alreadyMember = await pool.query(
-      "SELECT * FROM order_groups WHERE food_order_id = $1 AND user_id = $2",
-      [groupId, userId]
-    );
-
-    if (alreadyMember.rows.length === 0) {
-      return {
-        success: false,
-        error: "You are not a member of this group",
-      };
-    }
-
-    await pool.query(
-      "DELETE FROM order_groups (food_order_id, user_id) VALUES ($1, $2)",
-      [groupId, userId]
-    );
-
-    return { success: true };
+    return { success: row.success, error: row.error };
   } catch (e) {
-    console.error("Error leaving group:", e);
+    console.error("Error leaving Order:", e);
     return { success: false, error: (e as Error).message };
   }
 }
