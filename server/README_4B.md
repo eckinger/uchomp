@@ -79,7 +79,7 @@ POSTGRES_PORT=5432
 ### Testing
 
 1. Follow steps 1-5 of [Development](#Development)
-2. In a separate terminal, navigate to `/server` and run the tests with `npm run test`
+2. In a separate terminal, navigate to `/server` and run the tests with `npm test`
 
 Once your environment is configured, build the TypeScript project by running `npm run build`. . After a successful build, you can start the server using `npm start`. The server runs on `http://localhost:5151`.
 
