@@ -23,7 +23,7 @@ export const createOrder: RequestHandler = async (req, res) => {
     );
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
-    console.error("Error in /create-order:", err);
+    console.error("Error in /create:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
 };
@@ -78,6 +78,39 @@ export const leaveOrder: RequestHandler = async (req, res) => {
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     console.error("Error in /leave-order:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const updateOrderStatus: RequestHandler = async (req, res) => {
+  const orderId = req.params.id;
+  const { is_open } = req.body;
+
+  if (typeof is_open !== 'boolean') {
+    res.status(400).json({
+      success: false,
+      error: "is_open must be a boolean value",
+    });
+    return;
+  }
+
+  try {
+    const result = await orderService.updateOrderStatus(orderId, is_open);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /update-status:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+export const getOrderDetails: RequestHandler = async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    const result = await orderService.getOrderDetails(orderId);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /order-details:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
 };

@@ -9,7 +9,9 @@ export interface VerificationRequest {
 
 export interface VerificationResponse {
   success: boolean;
-  message: string;
+  message?: string;
+  error?: string;
+  id?: string;
   verification?: VerificationRequest;
 }
 

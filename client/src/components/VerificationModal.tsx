@@ -51,15 +51,23 @@ const VerificationModal: React.FC<VerificationModalProps> = ({ isOpen, onClose, 
       setIsLoading(true);
       setError(null);
       const result = await userService.verify(email, code);
+      console.log('Verification response:', result);
       if (result.success) {
-        // Store user email in localStorage for later use
+        // Store both email and user ID in localStorage
         localStorage.setItem('userEmail', email);
-        onVerified();
-        onClose();
+        if (result.id) {
+          localStorage.setItem('userId', result.id);
+          onVerified();
+          onClose();
+        } else {
+          console.error('No user ID found in response:', result);
+          setError('Failed to get user ID. Please try again.');
+        }
       } else {
         setError(result.error || 'Invalid verification code. Please try again.');
       }
     } catch (err) {
+      console.error('Verification error:', err);
       setError('Invalid verification code. Please try again.');
     } finally {
       setIsLoading(false);
@@ -94,7 +102,7 @@ const VerificationModal: React.FC<VerificationModalProps> = ({ isOpen, onClose, 
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-lg font-semibold text-gray-900">
-            {stage === 'email' ? 'Verify Email' : 'Enter Verification Code'}
+            {stage === 'email' ? 'Verify UChicago Email' : 'Enter Verification Code'}
           </h3>
           <button
             onClick={onClose}
@@ -116,7 +124,7 @@ const VerificationModal: React.FC<VerificationModalProps> = ({ isOpen, onClose, 
             <div>
               <div className="mb-4">
                 <p className="text-gray-600 mb-3">
-                  We'll send a verification code to your email to verify your identity.
+                  We'll send a verification code to your email to verify your UChicago student status.
                 </p>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />

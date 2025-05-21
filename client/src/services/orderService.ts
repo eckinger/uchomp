@@ -8,7 +8,7 @@ export default class OrderService {
     loc: string
   ) {
     try {
-      const response = await apiClient.post("/orders/create-order", {
+      const response = await apiClient.post("/orders/create", {
         owner_id: ownerId,
         restaurant,
         expiration,
@@ -33,13 +33,63 @@ export default class OrderService {
     }
   }
 
-  async getOrders() {
+  async getOrders(location?: string) {
     try {
-      // This will need to be implemented on the backend
       const response = await apiClient.get("/orders");
-      return response.data;
+      // Filter by location on the client side since backend doesn't support it
+      const orders = response.data || [];
+      if (location && Array.isArray(orders)) {
+        return orders.filter(order => order.location === location || order.loc === location);
+      }
+      return orders;
     } catch (error) {
       console.error("Error fetching orders:", error);
+      throw error;
+    }
+  }
+
+  async joinOrder(userId: string, orderId: string) {
+    try {
+      const response = await apiClient.post(`/orders/join/${orderId}`, {
+        user_id: userId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error joining order:", error);
+      throw error;
+    }
+  }
+
+  async leaveOrder(userId: string, orderId: string) {
+    try {
+      const response = await apiClient.post(`/orders/leave/${orderId}`, {
+        user_id: userId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error leaving order:", error);
+      throw error;
+    }
+  }
+
+  async updateOrderStatus(orderId: string, isOpen: boolean) {
+    try {
+      const response = await apiClient.post(`/orders/update-status/${orderId}`, {
+        is_open: isOpen,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      throw error;
+    }
+  }
+
+  async getOrderDetails(orderId: string) {
+    try {
+      const response = await apiClient.get(`/orders/details/${orderId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error getting order details:", error);
       throw error;
     }
   }

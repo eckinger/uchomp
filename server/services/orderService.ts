@@ -108,8 +108,8 @@ export async function leaveOrder(
   try {
     const result = await pool.query(
       'SELECT * FROM leave_order($1, $2)', [
-        userId, orderId
-      ]);
+      userId, orderId
+    ]);
 
     const row = result.rows[0];
 
@@ -117,6 +117,52 @@ export async function leaveOrder(
   } catch (e) {
     console.error("Error leaving Order:", e);
     return { success: false, error: (e as Error).message };
+  }
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  isOpen: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM update_order_status($1, $2)`,
+      [orderId, isOpen]
+    );
+
+    const row = result.rows[0];
+    return { success: row.success, error: row.error };
+  } catch (err) {
+    console.error("Error updating order status:", err);
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function getOrderDetails(
+  orderId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  orderDetails?: any;
+}> {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM get_order_details($1)`,
+      [orderId]
+    );
+
+    const row = result.rows[0];
+    return {
+      success: row.success,
+      error: row.error,
+      orderDetails: row.order_details
+    };
+  } catch (err) {
+    console.error("Error getting order details:", err);
+    return {
+      success: false,
+      error: (err as Error).message
+    };
   }
 }
 

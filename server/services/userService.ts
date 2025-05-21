@@ -29,7 +29,7 @@ export async function sendCode(
       <p>Your verification code is: <strong>${code}</strong></p>
       <p>Please enter this code to verify your email address.</p>
     `;
-    
+
     await notificationService.sendEmail(email, subject, html);
     return { success: true, code };
   } catch (err) {
@@ -44,7 +44,7 @@ export async function sendCode(
 export async function verify(
   email: string,
   code: number
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; id?: string }> {
   try {
     const result = await pool.query(`SELECT * FROM verify_user_code($1, $2)`, [
       email,
@@ -56,8 +56,7 @@ export async function verify(
       return { success: false, error: row.error };
     }
 
-    console.log(`Generated code for ${email}: ${code}`);
-    return { success: true };
+    return { success: true, id: row.user_id };
   } catch (err) {
     console.error("Error during verification:", err);
     return { success: false, error: (err as Error).message };

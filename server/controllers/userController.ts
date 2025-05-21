@@ -43,7 +43,7 @@ export const updateAccountInformation: RequestHandler = async (req, res) => {
     const result = await userService.updateNameAndCell(email, name, cell);
     res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
-    console.error("Error in /update-profile:", err);
+    console.error("Error in /update:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
 };

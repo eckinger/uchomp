@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Shield, Phone, Info } from 'lucide-react';
 import UserService from '../services/userService';
+import { useNavigate } from 'react-router-dom';
 
 interface RecordInfoProps {
   onBack?: () => void;
@@ -22,6 +23,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
   onBack = () => window.history.back(),
   onContinue = () => { }
 }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     name: '',
     phoneNumber: '',
@@ -39,8 +41,8 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
 
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = 'Phone number is required';
-    } else if (!/^\+?[\d\s-()]{10,}$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Please enter a valid phone number';
+    } else if (!/^\d{3}-\d{3}-\d{4}$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = 'Please enter a valid 10-digit phone number';
     }
 
     setErrors(newErrors);
@@ -68,6 +70,8 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
         localStorage.setItem('userName', formData.name);
         localStorage.setItem('userPhone', formData.phoneNumber);
         onContinue(formData);
+        // Navigate to Create Order page
+        navigate('/create');
       } else {
         setErrors({
           name: result.error || 'Failed to save information. Please try again.',
@@ -84,10 +88,32 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+    if (name === 'phoneNumber') {
+      // Remove all non-digit characters
+      const digitsOnly = value.replace(/\D/g, '');
+
+      // Format the phone number
+      let formattedNumber = '';
+      if (digitsOnly.length <= 3) {
+        formattedNumber = digitsOnly;
+      } else if (digitsOnly.length <= 6) {
+        formattedNumber = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
+      } else {
+        formattedNumber = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, 10)}`;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedNumber
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+
     // Clear error when user starts typing
     if (errors[name as keyof FormErrors]) {
       setErrors(prev => ({
@@ -126,10 +152,10 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
 
           <div className="space-y-5">
             {/* Why we collect information */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="text-md font-semibold mb-2 text-blue-800">Why do we need this information?</h3>
-              <p className="text-sm text-blue-700">
-                We collect your contact information to facilitate group food ordering. Your email is used for verification, and your phone number helps order participants contact each other. We never share your information with third parties.
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <h3 className="text-md font-semibold mb-2 text-orange-800">Why do we need this information?</h3>
+              <p className="text-sm text-orange-700">
+                Your name and phone number help group order participants contact each other. We'll only share this information with people you're ordering with, never with third parties.
               </p>
             </div>
 
@@ -167,7 +193,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
                   type="tel"
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
-                  placeholder="(123) 456-7890"
+                  placeholder="123-456-7890"
                   className={`w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'
                     }`}
                   disabled={isLoading}
@@ -176,9 +202,6 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
               {errors.phoneNumber && (
                 <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
               )}
-              <p className="mt-1 text-sm text-gray-500">
-                We'll only share this with people you're ordering with.
-              </p>
             </div>
 
             <div className="flex items-center mt-2 text-sm text-gray-600">

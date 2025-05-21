@@ -267,6 +267,7 @@ BEGIN
           ) AS participants
         FROM food_orders fo
         WHERE fo.expiration > NOW()
+          AND fo.is_open = true
           AND (v_location IS NULL OR fo.location = v_location)
         ORDER BY fo.expiration
       ) o
@@ -454,82 +455,136 @@ $_$;
 -- Name: verify_user_code(text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.verify_user_code(p_email text, p_code integer) RETURNS TABLE(success boolean, error text)
+CREATE FUNCTION public.verify_user_code(p_email text, p_code integer) RETURNS TABLE(success boolean, error text, user_id uuid)
     LANGUAGE plpgsql
     AS $$
 
 DECLARE
-
   v_key INT;
-
   v_created_at TIMESTAMP;
-
   v_diff_minutes DOUBLE PRECISION;
-
+  v_user_id UUID;
 BEGIN
-
   SELECT key, created_at INTO v_key, v_created_at
-
   FROM codes
-
   WHERE email = p_email;
 
-
-
   IF NOT FOUND THEN
-
-    RETURN QUERY SELECT FALSE, 'Code not found.';
-
+    RETURN QUERY SELECT FALSE, 'Code not found.', NULL::UUID;
     RETURN;
-
   END IF;
-
-
 
   IF v_key <> p_code THEN
-
-    RETURN QUERY SELECT FALSE, 'Invalid code.';
-
+    RETURN QUERY SELECT FALSE, 'Invalid code.', NULL::UUID;
     RETURN;
-
   END IF;
-
-
 
   v_diff_minutes := EXTRACT(EPOCH FROM (NOW() - v_created_at)) / 60.0;
 
-
-
   IF v_diff_minutes > 10 THEN
-
-    RETURN QUERY SELECT FALSE, 'Code has expired.';
-
+    RETURN QUERY SELECT FALSE, 'Code has expired.', NULL::UUID;
     RETURN;
-
   END IF;
 
-
-
-  -- Create user if not exists
-
+  -- Create user if not exists and get the ID
   INSERT INTO users (email)
-
   VALUES (p_email)
-
   ON CONFLICT (email) DO NOTHING;
-
-
+  
+  -- Get the user ID
+  SELECT id INTO v_user_id FROM users WHERE email = p_email;
 
   -- Delete the code
-
   DELETE FROM codes WHERE email = p_email;
 
-
-
-  RETURN QUERY SELECT TRUE, NULL;
-
+  RETURN QUERY SELECT TRUE, NULL, v_user_id;
 END;
+$$;
 
+
+--
+-- Name: update_order_status(uuid, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_order_status(p_order_id uuid, p_is_open boolean) RETURNS TABLE(success boolean, error text)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_exists BOOLEAN;
+BEGIN
+    -- Check if order exists
+    SELECT EXISTS(SELECT 1 FROM food_orders WHERE id = p_order_id) INTO v_exists;
+
+    IF NOT v_exists THEN
+        RETURN QUERY SELECT FALSE, 'Order not found';
+        RETURN;
+    END IF;
+
+    -- Update order status
+    UPDATE food_orders 
+    SET is_open = p_is_open 
+    WHERE id = p_order_id;
+
+    RETURN QUERY SELECT TRUE, NULL;
+END;
+$$;
+
+
+--
+-- Name: get_order_details(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_order_details(p_order_id uuid) 
+RETURNS TABLE(
+  success boolean, 
+  error text,
+  order_details JSON
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Check if order exists
+  IF NOT EXISTS (SELECT 1 FROM food_orders WHERE id = p_order_id) THEN
+    RETURN QUERY SELECT FALSE, 'Order not found'::text, NULL::JSON;
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT 
+    TRUE,
+    NULL::text,
+    (
+      SELECT row_to_json(order_info)
+      FROM (
+        SELECT
+          fo.id,
+          fo.owner_id,
+          fo.restaurant,
+          fo.expiration,
+          fo.location,
+          fo.is_open,
+          (
+            SELECT json_agg(participant_info)
+            FROM (
+              SELECT 
+                u.id,
+                u.name,
+                u.cell,
+                u.email,
+                CASE WHEN u.id = fo.owner_id THEN TRUE ELSE FALSE END as is_owner
+              FROM order_groups og
+              JOIN users u ON og.user_id = u.id
+              WHERE og.food_order_id = fo.id
+              ORDER BY 
+                CASE WHEN u.id = fo.owner_id THEN 0 ELSE 1 END,
+                og.created_at
+            ) participant_info
+          ) as participants
+        FROM food_orders fo
+        WHERE fo.id = p_order_id
+      ) order_info
+    );
+END;
 $$;
 
 

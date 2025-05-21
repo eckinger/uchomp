@@ -42,7 +42,7 @@ POSTGRES_PORT=5432
 Once your environment is configured, build the TypeScript project by running `npm run build`. . After a successful build, you can start the server using `npm start`. The server runs on `http://localhost:5151`.
 
 You can also run manual acceptance tests using PowerShell. Ensure that a terminal is running the server before you use the commands below.
-To send a verification code to a user, use a POST request to `/send-code` with a JSON body containing an email. A successful response includes the generated code. Use that code in a POST request to `/verify` to confirm the user's email. To complete the user's profile, send a POST request to `/update-profile` with the same email and the user's name and phone number in the format `XXX-XXX-XXXX`. For order management, create a new food order by POSTing to `/create-order` with `owner_id`, `restaurant`, `expiration` (as an ISO timestamp), and `loc` (one of the predefined enum values like `Regenstein Library`). Notice that the `owner_id` should match a user ID that you created. You can check for a user ID on the NeonDB under Tables. Delete an order using DELETE `/delete-order/:id` where `:id` is the order's ID.
+To send a verification code to a user, use a POST request to `/send-code` with a JSON body containing an email. A successful response includes the generated code. Use that code in a POST request to `/verify` to confirm the user's email. To complete the user's profile, send a POST request to `/update-profile` with the same email and the user's name and phone number in the format `XXX-XXX-XXXX`. For order management, create a new food order by POSTing to `/create` with `owner_id`, `restaurant`, `expiration` (as an ISO timestamp), and `loc` (one of the predefined enum values like `Regenstein Library`). Notice that the `owner_id` should match a user ID that you created. You can check for a user ID on the NeonDB under Tables. Delete an order using DELETE `/delete-order/:id` where `:id` is the order's ID.
 Here's an example of the commands to use in powershell:
 
 Sending Verication Code:
@@ -148,7 +148,7 @@ The backend server was refactored from a single JavaScript file (`server.js`) to
 - POST `/send-code`: Triggers a verification code to the specified email.
 - POST `/verify`: Verifies the submitted code for a given email.
 - POST `/update-profile`: Updates a user’s full name and cell number.
-- POST `/create-order`: Adds a new food order to the system.
+- POST `/create`: Adds a new food order to the system.
 - DELETE `/delete-order/:id`: Removes a specific food order by ID.
 - GET `/api/users`: Lists all users in the system.
 - GET `/orders`: Retrieves all active food orders with participant information.

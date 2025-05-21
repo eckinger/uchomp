@@ -13,7 +13,10 @@ export default class UserService {
 
   async verify(email: string, key: string) {
     try {
-      const response = await apiClient.post("/users/verify", { email, key });
+      const response = await apiClient.post("/users/verify", {
+        email,
+        key: parseInt(key, 10)
+      });
       return response.data;
     } catch (error) {
       console.error("Error verifying code:", error);
@@ -23,7 +26,7 @@ export default class UserService {
 
   async updateProfile(email: string, name: string, cell: string) {
     try {
-      const response = await apiClient.post("/users/update-profile", {
+      const response = await apiClient.post("/users/update", {
         email,
         name,
         cell,
