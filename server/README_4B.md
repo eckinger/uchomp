@@ -43,26 +43,24 @@ Note: We all worked together, helped on everything, and the divisons of labor be
 
 This server powers the backend of the Uchomp application and is built using Node.js with TypeScript, Express for handling HTTP requests, and PostgreSQL for persistent data storage using NeonDB
 
-### Prerequisites
+## Prerequisites
 
 1. Node.js
 2. [Docker](https://docs.docker.com/desktop/)
 
 - We use the command line interface (CLI) instead of the GUI primarily
 
-### Getting Started
+## Getting Started
 
 ### Development
 
 1. Clone the repo
 2. Navigate to `server/`
 3. Install packages with `npm install`
-    3a. Remember: 'npm install resend'
 4. Create a `.env` and `.env.db` environment files. Reasonable defaults are below:
 
 ```.env
 DATABASE_URL=postgresql://neondb_owner:password@localhost:5432/uchomp_dev
-RESEND_API_KEY=re_FtKzmJQ5_52cUV7JdTPEAQuSe53PzQs6S
 ```
 
 ```.env.db
@@ -75,6 +73,7 @@ POSTGRES_PORT=5432
 > [!important] > `neondb_owner` is not arbitrary—it is given privileges to the docker database in `.init-db.sql`
 
 5. Fire up the container using `docker compose up --build`
+ > Note: Make sure docker desktop is open before firing up the container, and after you're done with docker, use `docker compose down` to close the container. 
 6. Develop against a working database
 
 ### Testing
@@ -84,8 +83,10 @@ POSTGRES_PORT=5432
 
 Once your environment is configured, build the TypeScript project by running `npm run build`. . After a successful build, you can start the server using `npm start`. The server runs on `http://localhost:5151`.
 
-You can also run manual acceptance tests using PowerShell. Ensure that a terminal is running the server before you use the commands below.
-To send a verification code to a user, use a POST request to `/send-code` with a JSON body containing an email. A successful response includes the generated code. Use that code in a POST request to `/verify` to confirm the user's email. To complete the user's profile, send a POST request to `/update-profile` with the same email and the user's name and phone number in the format `XXX-XXX-XXXX`. For order management, create a new food order by POSTing to `/create` with `owner_id`, `restaurant`, `expiration` (as an ISO timestamp), and `loc` (one of the predefined enum values like `Regenstein Library`). Notice that the `owner_id` should match a user ID that you created. You can check for a user ID on the NeonDB under Tables. Delete an order using DELETE `/delete-order/:id` where `:id` is the order's ID.
+You can also run manual acceptance tests using PowerShell. Ensure that a terminal is running the server and you do `docker compose up --build` before you use the commands below. Also, be sure to be inside `/server` when doing manual testing.
+
+To send a verification code to a user, use a POST request to `api/users/send-code` with a JSON body containing an email. A successful response includes the generated code. Use that code in a POST request to `api/users/verify` to confirm the user's email. To complete the user's profile, send a POST request to `api/users/update` with the same email and the user's name and phone number in the format `XXX-XXX-XXXX`. For order management, create a new food order by POSTing to `/api/orders/create` with `owner_id`, `restaurant`, `expiration` (as an ISO timestamp), and `loc` (one of the predefined enum values like `Regenstein Library`). Notice that the `owner_id` should match a user ID that you created. You can check for a user ID on the NeonDB under Tables. Delete an order using POST `/api/orders/delete/:id` where `:id` is the order's ID.
+
 Here's an example of the commands to use in powershell:
 
 Sending Verication Code:
@@ -97,7 +98,8 @@ Invoke-RestMethod -Uri "http://localhost:5151/api/users/send-code" `
 ```
 
 Expected Output:
-{ "success": true, "code": "XXXXXX" }
+`{ "success": true, "code": "XXXXXX" }`
+> Use the "XXXXXX" in the following command below
 
 Verify Code:
 
@@ -109,7 +111,7 @@ Invoke-RestMethod -Uri "http://localhost:5151/api/users/verify" `
 ```
 
 Expected Output:
-{ "success": true }
+`{ "success": true }`
 
 Update User Profile:
 
@@ -121,7 +123,7 @@ Invoke-RestMethod -Uri "http://localhost:5151/api/users/update" `
 ```
 
 Expected Output:
-{ "success": true }
+`{ "success": true }`
 
 Create Order:
 
@@ -131,33 +133,26 @@ Invoke-RestMethod -Uri "http://localhost:5151/api/orders/create" `
   -Body '{
     "owner_id": "user-id-from-db",
     "restaurant": "Pizza Palace",
-    "expiration": "2025-05-06T23:59:00Z",
+    "expiration": "2026-05-06T23:59:00Z",
     "loc": "Regenstein Library"
   }' `
   -ContentType "application/json"
 ```
+> Note: You'll have to manually access the database to retrieve a user-id. You can do this with postgres installed, and using `psql -U postgres -d uchomp_dev` then to access the users table and list all users in the postgres, use `SELECT * FROM USERS;`. Then find a user-id from the table, and copy and paste it into `"owner_id"` below. If postgres is giving you trouble, you can also use download pgadmin 4, and add the docker server into pgadmin. Then use the dropdown to open servers, then Databases, then right-click on uchomp_dev, click on `Query Tool`, then input `SELECT * FROM USERS;`, and finally click the play button/execute script. The users table will be shown, and select a user-id from that table.
 
 Expected Output:
-{ "success": true, "order_id": <order_id> }
-
-Delete Order:
-
-```powershell
-Invoke-RestMethod -Uri "http://localhost:5151/api/orders/delete/<order_id>" `
-  -Method DELETE
-```
-
-Expected Output:
-{ "success": true }
+`{ "success": true, "order_id": <order_id> }`
+> Note: You need the order_id to delete an order, so be sure to use this order_id when using the delete order command below.
 
 Get Orders:
 
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:5151/orders" `
+Invoke-RestMethod -Uri "http://localhost:5151/api/orders" `
   -Method GET
 ```
 
 Expected Output:
+```
 [
 {
 "id": 1,
@@ -170,6 +165,20 @@ Expected Output:
 },
 ...
 ]
+```
+> Note: If there are no orders in the database, then it won't return anything
+
+Delete Order:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/api/orders/delete/<order_id>" `
+  -Method POST
+```
+
+Expected Output:
+`{ "success": true }`
+
+## Implementation Details
 
 The implementation includes the new notification service module: `notificationService.ts`:
 
