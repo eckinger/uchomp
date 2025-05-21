@@ -1,27 +1,27 @@
 import { pool } from "../db/db";
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
-const resend = new Resend('re_EAiWesYB_BUVrtCALbKrrpzZZkdp2wwNn');
+const resend = new Resend("re_EAiWesYB_BUVrtCALbKrrpzZZkdp2wwNn");
 
 export async function sendEmail(email: string, subject: string, html: string) {
   try {
     await resend.emails.send({
-      from: 'hello@uchomp.dev',
+      from: "uchomp@aeckinger.com",
       to: email,
       subject,
-      html
+      html,
     });
     return { success: true };
-  } catch(err) {
+  } catch (err) {
     console.error("Error sending email:", err);
     return { success: false, error: (err as Error).message };
   }
 }
 
 export async function sendExpirationNotification(
-  userEmail: string, 
+  userEmail: string,
   groupName: string,
-  expirationTime: Date
+  expirationTime: Date,
 ) {
   const timeFormatted = expirationTime.toLocaleTimeString();
   const subject = `Your UChomps group for ${groupName} is expiring soon`;
@@ -30,13 +30,13 @@ export async function sendExpirationNotification(
     <p>Your food order group for ${groupName} will expire at ${timeFormatted}.</p>
     <p>Please make sure to finalize your order before the expiration time.</p>
   `;
-  
+
   return sendEmail(userEmail, subject, html);
 }
 
 export async function sendJoinNotification(
   userEmail: string,
-  groupName: string
+  groupName: string,
 ) {
   const subject = `Welcome to ${groupName} group on UChomps`;
   const html = `
@@ -50,7 +50,7 @@ export async function sendJoinNotification(
 
 export async function sendLeaveNotification(
   userEmail: string,
-  groupName: string
+  groupName: string,
 ) {
   const subject = `Left ${groupName} group on UChomps`;
   const html = `
@@ -61,3 +61,4 @@ export async function sendLeaveNotification(
 
   return sendEmail(userEmail, subject, html);
 }
+
