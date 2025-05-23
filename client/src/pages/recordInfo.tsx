@@ -70,8 +70,24 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
         localStorage.setItem('userName', formData.name);
         localStorage.setItem('userPhone', formData.phoneNumber);
         onContinue(formData);
-        // Navigate to Create Order page
-        navigate('/create');
+
+        // Get the stored action and handle routing
+        const postProfileAction = localStorage.getItem('postProfileAction');
+        const pendingJoinOrderId = localStorage.getItem('pendingJoinOrderId');
+
+        // Clean up stored action and orderId
+        localStorage.removeItem('postProfileAction');
+        localStorage.removeItem('pendingJoinOrderId');
+
+        if (postProfileAction === 'create') {
+          navigate('/create');
+        } else if (postProfileAction === 'join' && pendingJoinOrderId) {
+          // Return to the groups page where the join action will be handled
+          navigate('/');
+        } else {
+          // Default to groups page if no specific action
+          navigate('/');
+        }
       } else {
         setErrors({
           name: result.error || 'Failed to save information. Please try again.',

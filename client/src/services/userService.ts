@@ -37,4 +37,14 @@ export default class UserService {
       throw error;
     }
   }
+
+  async checkProfileCompletion(email: string) {
+    try {
+      const response = await apiClient.post("/users/check-profile", { email });
+      return response.data;
+    } catch (error) {
+      console.error("Error checking profile completion:", error);
+      throw error;
+    }
+  }
 }

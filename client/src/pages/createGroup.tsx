@@ -1,19 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock, ArrowLeft, Users } from 'lucide-react';
 import OrderService from '../services/orderService';
 
-export default function CreateGroup() {
+interface FormData {
+  restaurant: string;
+  location: string;
+  orderTime: string;
+  maxParticipants: number;
+}
+
+const CreateGroup: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const orderService = new OrderService();
-  const [formData, setFormData] = useState({
+
+  // Initialize form data with saved location
+  const [formData, setFormData] = useState<FormData>({
     restaurant: '',
-    loc: '',
-    orderTime: ''
+    location: localStorage.getItem('lastSelectedLocation') || 'Regenstein Library',
+    orderTime: '',
+    maxParticipants: 4
   });
 
   // Get today's date at midnight for min, and 11:30 PM for max
@@ -91,7 +101,7 @@ export default function CreateGroup() {
         userId,
         formData.restaurant,
         expirationDate,
-        formData.loc
+        formData.location
       );
 
       if (result.success) {
@@ -159,15 +169,15 @@ export default function CreateGroup() {
 
             {/* Location */}
             <div>
-              <label htmlFor="loc" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                 Delivery Location
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <select
-                  id="loc"
-                  value={formData.loc}
-                  onChange={(e) => setFormData({ ...formData, loc: e.target.value })}
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   className="w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 border-gray-300"
                   required
                   disabled={isLoading}
@@ -242,8 +252,8 @@ export default function CreateGroup() {
             <div className="mt-6">
               <button
                 type="submit"
-                disabled={isLoading || !formData.restaurant || !formData.loc || !formData.orderTime}
-                className={`w-full py-3 rounded-md font-medium transition-colors ${isLoading || !formData.restaurant || !formData.loc || !formData.orderTime
+                disabled={isLoading || !formData.restaurant || !formData.location || !formData.orderTime}
+                className={`w-full py-3 rounded-md font-medium transition-colors ${isLoading || !formData.restaurant || !formData.location || !formData.orderTime
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-orange-600 text-white hover:bg-orange-700'
                   }`}
@@ -256,4 +266,6 @@ export default function CreateGroup() {
       </main>
     </div>
   );
-} 
+}
+
+export default CreateGroup; 

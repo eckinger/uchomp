@@ -5,6 +5,7 @@ import { PlusCircle, Clock, Users, MapPin, X, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import OrderService from "services/orderService";
 import VerificationModal from "../components/VerificationModal";
+import UserService from "services/userService";
 
 interface Order {
   id: string;
@@ -26,7 +27,10 @@ export default function ViewGroups() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [verificationAction, setVerificationAction] = useState<'create' | 'join'>('create');
+  const [verificationOrderId, setVerificationOrderId] = useState<string | undefined>(undefined);
   const orderService = new OrderService();
+  const userService = new UserService();
 
   const locations = [
     "Regenstein Library",
@@ -56,43 +60,80 @@ export default function ViewGroups() {
     }
   };
 
-  const handleCreateClick = () => {
-    const userEmail = localStorage.getItem("userEmail");
-    const userName = localStorage.getItem("userName");
+  // Store location when it changes
+  const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLocation = e.target.value;
+    setSelectedLocation(newLocation);
+    localStorage.setItem('lastSelectedLocation', newLocation);
+  };
 
-    // Check if user is logged in with profile
-    if (!userEmail) {
+  const handleCreateClick = async () => {
+    const userId = localStorage.getItem("userId");
+
+    // Store current location before proceeding
+    localStorage.setItem('lastSelectedLocation', selectedLocation);
+
+    if (!userId) {
+      setVerificationAction('create');
+      setVerificationOrderId(undefined);
       setIsVerificationOpen(true);
-    } else if (!userName) {
-      // User verified email but hasn't set profile
-      navigate("/record-info");
     } else {
-      // User has email and profile, go directly to create page
-      navigate("/create");
+      // Check profile status directly from backend
+      try {
+        const email = localStorage.getItem("userEmail");
+        if (!email) {
+          setError("User email not found. Please try again.");
+          return;
+        }
+        const profileCheck = await userService.checkProfileCompletion(email);
+
+        if (profileCheck.success && profileCheck.hasProfile) {
+          navigate("/create");
+        } else {
+          localStorage.setItem('postProfileAction', 'create');
+          navigate("/record-info");
+        }
+      } catch (err) {
+        setError("Failed to check profile status. Please try again.");
+      }
     }
   };
 
   const handleJoinClick = async (orderId: string) => {
-    const userEmail = localStorage.getItem("userEmail");
-    const userName = localStorage.getItem("userName");
     const userId = localStorage.getItem("userId");
 
-    if (!userEmail) {
+    // Store current location before proceeding
+    localStorage.setItem('lastSelectedLocation', selectedLocation);
+
+    if (!userId) {
+      setVerificationAction('join');
+      setVerificationOrderId(orderId);
       setIsVerificationOpen(true);
-    } else if (!userName) {
-      // Store the order ID to join after profile setup
-      localStorage.setItem("pendingJoinOrderId", orderId);
-      navigate("/record-info");
-    } else if (userId) {
+    } else {
+      // Check profile status directly from backend
       try {
-        const result = await orderService.joinOrder(userId, orderId);
-        if (result.success) {
-          await fetchOrders();
+        const email = localStorage.getItem("userEmail");
+        if (!email) {
+          setError("User email not found. Please try again.");
+          return;
+        }
+        const profileCheck = await userService.checkProfileCompletion(email);
+
+        if (profileCheck.success && profileCheck.hasProfile) {
+          // Proceed with joining the order
+          const result = await orderService.joinOrder(userId, orderId);
+          if (result.success) {
+            await fetchOrders();
+          } else {
+            setError(result.error || "Failed to join group");
+          }
         } else {
-          setError(result.error || "Failed to join group");
+          localStorage.setItem('postProfileAction', 'join');
+          localStorage.setItem("pendingJoinOrderId", orderId);
+          navigate("/record-info");
         }
       } catch (err) {
-        setError("Failed to join group. Please try again.");
+        setError("Failed to check profile status. Please try again.");
       }
     }
   };
@@ -149,21 +190,33 @@ export default function ViewGroups() {
     }
   };
 
-  const handleVerified = () => {
-    // Check if user has a profile
-    const userName = localStorage.getItem("userName");
-    const pendingOrderId = localStorage.getItem("pendingJoinOrderId");
+  const handleVerified = async () => {
+    const email = localStorage.getItem("userEmail");
+    if (!email) {
+      setError("User email not found. Please try again.");
+      return;
+    }
 
-    if (!userName) {
-      // User needs to fill profile
-      navigate("/record-info");
-    } else if (pendingOrderId) {
-      // Clear the pending order ID and join the group
-      localStorage.removeItem("pendingJoinOrderId");
-      handleJoinClick(pendingOrderId);
-    } else {
-      // User already has a profile
-      navigate("/create");
+    try {
+      // Check profile status immediately after verification
+      const profileCheck = await userService.checkProfileCompletion(email);
+
+      if (profileCheck.success && profileCheck.hasProfile) {
+        // User already has a profile, proceed with action
+        const pendingOrderId = localStorage.getItem("pendingJoinOrderId");
+        if (pendingOrderId) {
+          // Clear the pending order ID and join the group
+          localStorage.removeItem("pendingJoinOrderId");
+          await handleJoinClick(pendingOrderId);
+        } else {
+          navigate("/create");
+        }
+      } else {
+        // User needs to fill profile
+        navigate("/record-info");
+      }
+    } catch (err) {
+      setError("Failed to check profile status. Please try again.");
     }
   };
 
@@ -274,6 +327,14 @@ export default function ViewGroups() {
     </div>
   );
 
+  // Initialize selected location from localStorage or default
+  useEffect(() => {
+    const savedLocation = localStorage.getItem('lastSelectedLocation');
+    if (savedLocation) {
+      setSelectedLocation(savedLocation);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
@@ -284,7 +345,7 @@ export default function ViewGroups() {
             <MapPin className="text-gray-500" size={20} />
             <select
               value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
+              onChange={handleLocationChange}
               className="py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               {locations.map((location) => (
@@ -358,6 +419,8 @@ export default function ViewGroups() {
         isOpen={isVerificationOpen}
         onClose={() => setIsVerificationOpen(false)}
         onVerified={handleVerified}
+        action={verificationAction}
+        orderId={verificationOrderId}
         groupData={{
           restaurant: "",
           location: selectedLocation,

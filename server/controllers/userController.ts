@@ -47,3 +47,14 @@ export const updateAccountInformation: RequestHandler = async (req, res) => {
     res.status(500).json({ success: false, error: "Server error" });
   }
 };
+
+export const checkUserProfile: RequestHandler = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await userService.checkProfileCompletion(email);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err) {
+    console.error("Error in /check-profile:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};

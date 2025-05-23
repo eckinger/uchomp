@@ -86,3 +86,24 @@ export async function updateNameAndCell(
     return { success: false, error: (err as Error).message };
   }
 }
+
+export async function checkProfileCompletion(
+  email: string
+): Promise<{ success: boolean; error?: string; hasProfile: boolean; userId?: string }> {
+  try {
+    const result = await pool.query(`SELECT * FROM check_user_profile_completion($1)`, [
+      email,
+    ]);
+
+    const row = result.rows[0];
+    return {
+      success: row.success,
+      error: row.error,
+      hasProfile: row.has_profile,
+      userId: row.user_id
+    };
+  } catch (err) {
+    console.error("Error checking profile completion:", err);
+    return { success: false, error: (err as Error).message, hasProfile: false };
+  }
+}

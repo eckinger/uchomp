@@ -588,6 +588,41 @@ END;
 $$;
 
 
+--
+-- Name: check_user_profile_completion(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_user_profile_completion(p_email text) 
+RETURNS TABLE(success boolean, error text, has_profile boolean, user_id uuid)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_user_record users%ROWTYPE;
+BEGIN
+    -- Check if user exists and get their info
+    SELECT * INTO v_user_record
+    FROM users
+    WHERE email = p_email;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT 
+            TRUE,
+            NULL::text,
+            FALSE,
+            NULL::uuid;
+        RETURN;
+    END IF;
+
+    -- Check if profile is complete (has name and cell)
+    RETURN QUERY SELECT 
+        TRUE,
+        NULL::text,
+        (v_user_record.name IS NOT NULL AND v_user_record.cell IS NOT NULL),
+        v_user_record.id;
+END;
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
