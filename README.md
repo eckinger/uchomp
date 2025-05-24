@@ -1,6 +1,6 @@
 # UChomps
 
-UChomps makes group food ordering at the University of Chicago fast, social, and convenient. It connects students who want to place shared orders from nearby restaurants—saving money and time.
+UChomps makes getting takeouts at the University of Chicago affordable, convenient, and social by facilitating group orders among students. It connects students on shared campus locations who want to order food from nearby restaurants—saving money and time.
 
 ---
 
@@ -20,7 +20,7 @@ UChomps makes group food ordering at the University of Chicago fast, social, and
 
 ## 📖 Introduction
 
-UChomps is a web application that facilitates group food ordering among UChicago students. Users can create or join order groups based on location and restaurant, verify their UChicago email, share contact information with group members, and confirm group orders collaboratively.
+UChomps is a web application that facilitates group food ordering among UChicago students. Users can verify their student status, create or join order groups based on shared delivery location and restaurant, share contact information with group members, and confirm group orders collaboratively.
 
 ---
 
