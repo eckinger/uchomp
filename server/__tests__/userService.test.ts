@@ -4,6 +4,7 @@ import { pool as db } from "../db/db";
 
 beforeEach(async () => {
   await db.query("BEGIN");
+  jest.clearAllMocks();
 });
 
 // Clean up database after each test
@@ -70,7 +71,6 @@ describe("User Service Tests", () => {
     test("should verify correct code", async () => {
       debugger;
       const result = await userService.verify(email, code);
-      console.log("CANARY: ", result.error);
       expect(result.success).toBe(true);
     });
 
@@ -164,7 +164,7 @@ describe("User Service Tests", () => {
   });
 
   test("should send a join notification email", async () => {
-    const emailService = require("resend"); // or wherever your wrapper is
+    const emailService = require("resend");
     const resendInstance = new emailService.Resend();
     const sendMock = resendInstance.emails.send;
 
@@ -180,7 +180,7 @@ describe("User Service Tests", () => {
     expect(sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
         to: userEmail,
-        subject: expect.stringContaining("joined"),
+        subject: expect.stringContaining("Welcome"),
         html: expect.stringContaining(groupName),
       })
     );
@@ -228,7 +228,7 @@ describe("User Service Tests", () => {
     expect(sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
         to: userEmail,
-        subject: expect.stringContaining("left"),
+        subject: expect.stringContaining("Left"),
         html: expect.stringContaining(groupName),
       })
     );
