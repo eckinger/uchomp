@@ -51,7 +51,18 @@ UChomps is a web application that facilitates group food ordering among UChicago
    npm install
    ```
 
-4. Create `.env` and `.env.db` files:
+4. Navigate to the frontend:
+   ```bash
+   cd ..
+   cd client/
+   ```
+
+5. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+6. Create `.env` and `.env.db` files inside server/:
 
    **.env**
    ```env
@@ -68,7 +79,7 @@ UChomps is a web application that facilitates group food ordering among UChicago
 
    > `neondb_owner` is required due to Docker DB permissions setup in `.init-db.sql`.
 
-5. Start the backend with Docker:
+7. Start the backend with Docker:
    ```bash
    docker compose up --build
    ```

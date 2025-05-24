@@ -55,9 +55,12 @@ This server powers the backend of the Uchomp application and is built using Node
 ### Development
 
 1. Clone the repo
-2. Navigate to `server/`
+2. Navigate to `client/`
 3. Install packages with `npm install`
-4. Create a `.env` and `.env.db` environment files. Reasonable defaults are below:
+4. Go back with `cd ..`
+5. Navigate to `server/`
+6. Install packages with `npm install`
+7. Create a `.env` and `.env.db` environment files. Reasonable defaults are below:
 
 ```.env
 DATABASE_URL=postgresql://neondb_owner:password@localhost:5432/uchomp_dev
@@ -72,9 +75,9 @@ POSTGRES_PORT=5432
 
 > [!important] > `neondb_owner` is not arbitrary—it is given privileges to the docker database in `.init-db.sql`
 
-5. Fire up the container using `docker compose up --build`
+8. Fire up the container using `docker compose up --build`
  > Note: Make sure docker desktop is open before firing up the container, and after you're done with docker, use `docker compose down` to close the container. 
-6. Develop against a working database
+9. Develop against a working database
 
 ### Testing
 
