@@ -154,7 +154,7 @@ Invoke-RestMethod -Uri "http://localhost:5151/api/orders" `
   -Method GET
 ```
 
-Expected Output:
+Example Expected Output:
 ```
 [
 {
@@ -171,6 +171,27 @@ Expected Output:
 ```
 > Note: If there are no orders in the database, then it won't return anything
 
+Join Order:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/api/orders/join/<order_id>" `
+  -Method POST `
+  -Body '{ "user_id": "<new_user-id-from-database>" }' `
+  -ContentType "application/json"
+```
+>Make sure you create a new user in order to join the order and use the user_id in the database in command. Also, use the order_id you acquired from creating a new order from the output in the command as well.
+
+Expected Output: ```{ "success": true }```
+
+Leave Order:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5151/api/orders/leave/<order_id>" `
+  -Method POST `
+  -Body '{ "user_id": "<user-id-from-database_inside-the-order>" }' `
+  -ContentType "application/json"
+```
+Expected Output: ```{ "success": true }```
+
 Delete Order:
 
 ```powershell
@@ -180,6 +201,8 @@ Invoke-RestMethod -Uri "http://localhost:5151/api/orders/delete/<order_id>" `
 
 Expected Output:
 `{ "success": true }`
+
+
 
 ## Implementation Details
 
@@ -192,3 +215,13 @@ In `notificationService.ts`, the following functionality was implemented:
 - `sendJoinNotification(userEmail, groupName)`: Triggers an email to be sent if a member joins a group
 - `sendLeaveNotification(userEmail, groupName)`: Triggers an email to be sent if a member of a group leaves
 
+It also includes additionas to the order service module:
+`orderService.ts`:
+
+The following functionality was added:
+
+- `joinOrder(userId, orderId)`: Adds a user to an existing group order. This function invokes the `join_order` stored procedure in the database.
+- `leaveOrder(userId, orderId)`: Removes a user from a group order they previously joined. This function invokes the `leave_order` stored procedure in the database.
+
+### Final Notes:
+At the end of this milestone, our email and notification functionalities weren't fully functional as we failed 8/48 tests. Although functionality was made, it wasn't completely furnished until after milestone completion.
